@@ -78,6 +78,7 @@ int main() {
     MPI_Barrier(aether_comm);
     if (!DidWork)
       throw std::string("init_geo_grid failed!");
+   
     gGrid.fill_grid(planet, report);
 
     // Initialize Magnetic grid:
