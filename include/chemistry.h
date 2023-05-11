@@ -7,31 +7,60 @@
 #include <vector>
 #include <string>
 
+/**************************************************************
+ * \class Chemistry
+ *
+ * \brief For keeping track of chemical reactions and conducting chemistry
+ *
+ * This class keeps track of the chemical reactions
+ *
+ *
+ *
+ * \author Aaron Ridley
+ *
+ * \date 2022/07/05
+ *
+ **************************************************************/
+
 class Chemistry {
 
  public:
 
+  /// This structure keeps track of one reaction.
+
   struct reaction_type {
     // Reactions:
     // loss1 + loss2 + loss3 -> source1 + source2 + source3
+    // Need to match the CSV file of the species or won't be recognized.
     std::vector<std::string> sources_names;
     std::vector<std::string> losses_names;
 
+    /// These are sources species indices:
     std::vector<int> sources_ids;
+    /// Determine whether source is a neutral or not:
     std::vector<bool> sources_IsNeutral;
 
+    /// These are losses species indices:
     std::vector<int> losses_ids;
+    /// Determine whether loss is a neutral or not:
     std::vector<bool> losses_IsNeutral;
 
+    /// Keep track of the number of sources:
     int nSources;
+    /// Keep track of the number of losses:
     int nLosses;
 
+    /// Energy for exothermic reactions:
     precision_t energy;
+    /// Reaction rate:
     precision_t rate;
+    /// Branching ratio if needed:
     precision_t branching_ratio;
   };
 
+  /// vector to keep track of all reactions:
   std::vector<reaction_type> reactions;
+  /// Total number of reactions:
   int64_t nReactions;
 
   Chemistry(Neutrals neutrals,
@@ -50,20 +79,6 @@ class Chemistry {
                              Report &report);
 
  private:
-
-  struct sources_and_losses_type {
-
-    precision_t neutral_sources[nSpecies];
-    precision_t neutral_losses[nSpecies];
-    precision_t ion_sources[nIons];
-    precision_t ion_losses[nIons];
-
-    precision_t heat_neutrals;
-    precision_t heat_ions;
-    precision_t heat_electrons;
-  };
-
-  sources_and_losses_type sources_and_losses;
 
   int read_chemistry_file(Neutrals neutrals,
                           Ions ions,

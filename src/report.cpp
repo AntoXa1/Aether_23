@@ -14,7 +14,7 @@
 Report::Report() {
   current_entry = "";
   nEntries = 0;
-  iVerbose = 0;
+  iVerbose = -2;
   divider = ">";
   divider_length = divider.length();
   // Set iLevel to -1, so that the call in main takes it to 0:
@@ -116,21 +116,25 @@ void Report::exit(std::string input) {
 // -----------------------------------------------------------------------
 
 void Report::times() {
-  std::cout << "Timing Summary :\n";
+  if (iVerbose >= 0) {
+    std::cout << "Timing Summary :\n";
+    float min_timing = entries[0].timing_total * TimingPercent / 100.0;
 
-  for (int i = 0; i < nEntries; i++) {
-    if (entries[i].iLevel <= iTimingDepth) {
-      std::cout << entries[i].entry << "\n";
+    for (int i = 0; i < nEntries; i++) {
+      if (entries[i].iLevel <= iTimingDepth &&
+          entries[i].timing_total >= min_timing) {
+        std::cout << entries[i].entry << "\n";
 
-      for (int j = 0; j < entries[i].iLevel; j++)
-        std::cout << "  ";
+        for (int j = 0; j < entries[i].iLevel; j++)
+          std::cout << "  ";
 
-      std::cout << "nTimes called : " << entries[i].nTimes << "\n";
+        std::cout << "nTimes called : " << entries[i].nTimes << "\n";
 
-      for (int j = 0; j < entries[i].iLevel; j++)
-        std::cout << "  ";
+        for (int j = 0; j < entries[i].iLevel; j++)
+          std::cout << "  ";
 
-      std::cout << "timing_total (s) : " << entries[i].timing_total << "\n";
+        std::cout << "timing_total (s) : " << entries[i].timing_total << "\n";
+      }
     }
   }
 }
@@ -180,9 +184,35 @@ void Report::set_timing_depth(int input) {
 }
 
 // -----------------------------------------------------------------------
+// Set the percent to report for timing at the end of the run
+// -----------------------------------------------------------------------
+
+void Report::set_timing_percent(float input) {
+  TimingPercent = input;
+}
+
+// -----------------------------------------------------------------------
 // Get the verbose level
 // -----------------------------------------------------------------------
 
 int Report::get_verbose() {
   return iVerbose;
+}
+
+// -----------------------------------------------------------------------
+// Report student checker
+// -----------------------------------------------------------------------
+
+void Report::student_checker_function_name(bool isStudent,
+					   std::string cStudentName,
+					   int iFunctionNumber,
+					   std::string cFunctionName) {
+  if (isStudent) {
+    if (cFunctionName.length() > 1)
+      print(-1, cStudentName + " found function " + cFunctionName);
+    else
+      std::cout << "> (" << iFunctionNumber << ")"
+		<< " What function is this " << cStudentName << "?\n";
+  }
+  return;
 }

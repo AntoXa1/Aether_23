@@ -35,11 +35,20 @@ int main() {
   Indices indices(input);
   iErr = read_and_store_indices(indices, input, report);
 
+// ---- AD
+    Quadtree quadtree(input, report);
+    if (!quadtree.is_ok())
+      throw std::string("quadtree initialization failed!");
+
+
   // Initialize Geographic grid:
   Grid gGrid(input.get_nLonsGeo(),
        input.get_nLatsGeo(),
        input.get_nAltsGeo(), nGeoGhosts);
-  gGrid.init_geo_grid(planet, input, report);
+  
+  gGrid.init_geo_grid(quadtree, planet, input, report);  
+//   gGrid.init_geo_grid(planet, input, report); 
+  
   gGrid.fill_grid(planet, report);
 
   // Initialize Magnetic grid:

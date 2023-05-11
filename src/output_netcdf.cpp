@@ -158,7 +158,7 @@ int output(Neutrals neutrals,
 
         // Output all species densities:
         std::vector<NcVar> denVar;
-        for (int iSpecies=0; iSpecies < nSpecies; iSpecies++) {
+        for (int iSpecies=0; iSpecies < neutrals.nSpecies; iSpecies++) {
           if (report.test_verbose(3))
             std::cout << "Outputting Var : "
                       << neutrals.species[iSpecies].cName << "\n";
@@ -191,6 +191,9 @@ int output(Neutrals neutrals,
       if (type_output == "ions" ||
           type_output == "states") {
 
+// @anton
+int nIons=ions.nSpecies;
+
         // Output all species densities:
         std::vector<NcVar> ionVar;
         for (int iSpecies=0; iSpecies < nIons; iSpecies++) {
@@ -206,7 +209,9 @@ int output(Neutrals neutrals,
         }
 
         ionVar.push_back(ncdf_file.addVar("e-", ncFloat, dimVector));
+        
         ionVar[nIons].putAtt(UNITS, neutrals.density_unit);
+
         output_variable_3d(startp, countp, ions.density_scgc, ionVar[nIons]);
       }
 

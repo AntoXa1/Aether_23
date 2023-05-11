@@ -90,9 +90,6 @@ void Ions::calc_ion_drift(Neutrals neutrals,
   std::vector<arma_cube> wind_forcing = make_cube_vector(nX, nY, nZ, 3);
   std::vector<arma_cube> total_forcing = make_cube_vector(nX, nY, nZ, 3);
 
-  report.print(5, "going into collision frequencies");
-  calc_ion_neutral_coll_freq(neutrals, report);
-
   int64_t iIon, iNeutral;
 
   std::vector<arma_cube> grad_Pi_plus_Pe;
@@ -109,7 +106,7 @@ void Ions::calc_ion_drift(Neutrals neutrals,
   for (int64_t iComp = 0; iComp < 3; iComp++)
     velocity_vcgc[iComp].zeros();
 
-  for (iIon = 0; iIon < nIons; iIon++) {
+  for (iIon = 0; iIon < nSpecies; iIon++) {
 
     for (int64_t iComp = 0; iComp < 3; iComp++) {
       species[iIon].perp_velocity_vcgc[iComp].zeros();
@@ -137,7 +134,7 @@ void Ions::calc_ion_drift(Neutrals neutrals,
       for (int64_t iComp = 0; iComp < 3; iComp++)
         wind_forcing[iComp].zeros();
 
-      for (iNeutral = 0; iNeutral < nSpecies; iNeutral++) {
+      for (iNeutral = 0; iNeutral < neutrals.nSpecies; iNeutral++) {
         rho_nuin = rho % species[iIon].nu_ion_neutral_vcgc[iNeutral];
         nuin_sum = nuin_sum + species[iIon].nu_ion_neutral_vcgc[iNeutral];
 

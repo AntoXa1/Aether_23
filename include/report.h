@@ -5,7 +5,7 @@
 #define INCLUDE_REPORT_H_
 
 /**************************************************************
- * \class Report 
+ * \class Report
  *
  * \brief A system for reporting within the program
 
@@ -17,7 +17,7 @@
  *
  * \author Aaron Ridley
  *
- * \date 2021/04/16 
+ * \date 2021/04/16
  **************************************************************/
 
 #include <string>
@@ -30,7 +30,7 @@ class Report {
 // -----------------------------------------------------------------------
 // Public functions and variables
 // -----------------------------------------------------------------------
-  
+
 public:
 
   // Functions:
@@ -47,7 +47,7 @@ public:
    user of the code. Some thoughts on levels:
    0 - essentially only report timing information
    1 - report only broadest level of detail
-   2 - report going in and out of functions, and maybe things that are 
+   2 - report going in and out of functions, and maybe things that are
        done once per iteration
    3-4 - Once per iteration types of outputs. More details at higher levels
    5+ - get into grid iterations. Produces a HUGE amount of info.
@@ -64,6 +64,12 @@ public:
    \param input the timing depth to be set for the code
    **/
   void set_timing_depth(int input);
+
+  /**************************************************************
+   \brief limit the timing report to functions that take long time to run
+   \param input minimum percent of total time to report
+   **/
+  void set_timing_percent(float input);
 
   /**************************************************************
    \brief Print message if iLevel <= verbose level of code
@@ -84,6 +90,18 @@ public:
   int get_verbose();
 
   /**************************************************************
+   \brief sends a message to a student about the function name
+   \param isStudent
+   \param cStudentName
+   \param iFunctionNumber
+   \param cFunctionName
+   **/
+  void student_checker_function_name(bool isStudent,
+				     std::string cStudentName,
+				     int iFunctionNumber,
+				     std::string cFunctionName);
+
+  /**************************************************************
    \brief Starts timer and reports when entering a function, if applicable
 
    This is typically placed at the start of a function. This function
@@ -94,9 +112,9 @@ public:
    - Records the name of the function and number of the function for exit.
 
    \param function_name The name of the function that is being entered
-   \param iFunction first time entered, this should be -1 or something, 
-                    then this is altered to be the number of the function. 
-                    when the function is called again, this number saves 
+   \param iFunction first time entered, this should be -1 or something,
+                    then this is altered to be the number of the function.
+                    when the function is called again, this number saves
                     a string compare
    **/
   void enter(std::string function_name, int &iFunction);
@@ -111,7 +129,7 @@ public:
    \brief Loop through all reported functions and report their run times
    **/
   void times();
-  
+
 // -----------------------------------------------------------------------
 // Private functions and variables
 // -----------------------------------------------------------------------
@@ -121,6 +139,8 @@ private:
   int iVerbose;
   /// the depth of the reporting for the timing at the end of the simulation
   int iTimingDepth;
+  /// Only report times above the given percentage of the total run time:
+  float TimingPercent;
 
   /// This is the information needed to be stored for each "entry" (when the
   /// enter function is called - typically a function, but could just be a
@@ -161,7 +181,7 @@ private:
   int iLevel;
 
   /// Report when leaving a function
-  bool DoReportOnExit = false;
+  bool DoReportOnExit = true;
 };
 
 #endif  // INCLUDE_REPORT_H_

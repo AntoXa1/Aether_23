@@ -1,24 +1,28 @@
 cmake_minimum_required(VERSION 3.10)
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_COMPILER "/opt/local/bin/gcc")
+set(CMAKE_CXX_COMPILER "/opt/local/bin/g++")
+
+
 project(Aether LANGUAGES CXX
                VERSION   2021.0)
 
 # Directory variables
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 set(MAIN_DIR ${PROJECT_SOURCE_DIR}/src/main)
+set(TESTS_DIR ${PROJECT_SOURCE_DIR}/tests)
 set(OUT_DIR ${PROJECT_SOURCE_DIR}/src/output)
 set(RUN_DIR ${PROJECT_SOURCE_DIR}/run)
 
-# Executable decision
-if(USE_NETCDF)
-  set(SRC_FILES ${OUT_DIR}/output_netcdf.cpp ${SRC_FILES})
-else()
-  set(SRC_FILES ${OUT_DIR}/output_binary.cpp ${SRC_FILES})
-endif()
 add_executable(aether ${SRC_FILES} ${MAIN_DIR}/main.cpp)
+
 if(USE_DOUBLE_PRECISION)
   add_compile_definitions(AETHER_USE_PRECISION_DOUBLE)
 endif()
+
+# Tests executable
+# add_executable(tests ${TESTS_DIR}/electrodynamics_unit_tests.cpp)
 
 # Set compiler and cmake options
 target_compile_options(aether PUBLIC -ffast-math -O3)
@@ -54,16 +58,24 @@ endif()
 
 find_package(OpenMP)
 if(OPENMP_FOUND)
+  target_include_directories(aether PUBLIC ${MPI_CXX_INCLUDE_DIRS})
   target_link_libraries(aether PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
-if(USE_NETCDF)
-  set(NETCDF_CXX "YES")
-  find_package(NetCDF REQUIRED)
-  target_include_directories(aether PUBLIC ${NETCDF_INCLUDES})
-  target_link_libraries(aether PUBLIC ${NETCDF_LIBRARIES_CXX})
-  target_link_libraries(aether PUBLIC ${NETCDF_LIBRARIES_C})
+find_package(MPI)
+if (MPI_FOUND)
+  target_include_directories(aether PUBLIC ${MPI_CXX_INCLUDE_PATH})
+  target_compile_options(aether PUBLIC ${MPI_CXX_COMPILE_FLAGS})
+  target_link_libraries(aether PUBLIC ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
 endif()
+
+#if(USE_NETCDF)
+set(NETCDF_CXX "YES")
+find_package(NetCDF REQUIRED)
+target_include_directories(aether PUBLIC ${NETCDF_INCLUDES})
+target_link_libraries(aether PUBLIC ${NETCDF_LIBRARIES_CXX})
+target_link_libraries(aether PUBLIC ${NETCDF_LIBRARIES_C})
+#endif()
 
 # Set up links for executable
 file(CREATE_LINK ${CMAKE_BINARY_DIR}/aether

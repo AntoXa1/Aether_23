@@ -52,7 +52,7 @@ Neutrals::species_chars Neutrals::create_species(Grid grid) {
 //  Initialize neutrals
 // -----------------------------------------------------------------------------
 
-Neutrals::Neutrals(Grid grid, Inputs input, Report report) {
+Neutrals::Neutrals(Grid grid, Planets planet, Inputs input, Report report) {
 
   int iErr;
   species_chars tmp;
@@ -63,10 +63,16 @@ Neutrals::Neutrals(Grid grid, Inputs input, Report report) {
 
   report.print(2, "Initializing Neutrals");
 
+  json planet_neutrals = planet.get_neutrals();
+
   for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
     tmp = create_species(grid);
     species.push_back(tmp);
   }
+
+  velocity_name.push_back("Zonal Wind");
+  velocity_name.push_back("Meridional Wind");
+  velocity_name.push_back("Vertical Wind");
 
   // State variables:
 
@@ -100,11 +106,8 @@ Neutrals::Neutrals(Grid grid, Inputs input, Report report) {
 
   heating_efficiency = input.get_euv_heating_eff_neutrals();
 
-  initial_temperatures = NULL;
-  initial_altitudes = NULL;
-
   // This gets a bunch of the species-dependent characteristics:
-  iErr = read_planet_file(input, report);
+  iErr = read_planet_file(planet, input, report);
 
   if (iErr > 0)
     std::cout << "Error reading planet file!" << '\n';
@@ -120,7 +123,7 @@ Neutrals::Neutrals(Grid grid, Inputs input, Report report) {
 // Read in the planet file that describes the species - only neutrals
 // -----------------------------------------------------------------------------
 
-int Neutrals::read_planet_file(Inputs input, Report report) {
+int Neutrals::read_planet_file(Planets planet, Inputs input, Report report) {
 
   int iErr = 0;
   std::string hash;
@@ -128,84 +131,28 @@ int Neutrals::read_planet_file(Inputs input, Report report) {
 
   report.print(3, "In read_planet_file for Neutrals");
 
-  infile_ptr.open(input.get_planet_species_file());
+  json neutrals = planet.get_neutrals();
 
-  if (!infile_ptr.is_open()) {
-    std::cout << "Could not open input file: "
-              << input.get_planet_species_file() << "!!!\n";
-    iErr = 1;
-  } else {
+  nSpecies = neutrals["name"].size();
 
-    int IsDone = 0;
+  for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
+    species[iSpecies].cName = neutrals["name"][iSpecies];
+    double mass = neutrals["mass"][iSpecies];
+    species[iSpecies].mass = mass * cAMU;
+    species[iSpecies].vibe = neutrals["vibration"][iSpecies];
+    species[iSpecies].thermal_cond = neutrals["thermal_cond"][iSpecies];
+    species[iSpecies].thermal_exp = neutrals["thermal_exp"][iSpecies];
+    species[iSpecies].DoAdvect = neutrals["advect"][iSpecies];
+    species[iSpecies].lower_bc_density = neutrals["BC"][iSpecies];
+  }
 
-    while (!IsDone) {
+  json temperatures = planet.get_temperatures();
+  nInitial_temps = temperatures["alt"].size();
 
-      hash = find_next_hash(infile_ptr);
-
-      if (report.test_verbose(4))
-        std::cout << "hash : -->" << hash << "<--\n";
-
-      if (hash == "#neutrals") {
-        // Read in the characteristics as CSVs:
-        report.print(4, "Found #neutrals!");
-
-        std::vector<std::vector<std::string>> lines = read_csv(infile_ptr);
-
-        // I should totally redo the initialization of the species,
-        // since we could just do it here, but that is for the future.
-
-        if (lines.size() - 1 != nSpecies) {
-          std::cout << "number of neutrals species defined in planet.h file : "
-                    << nSpecies << "\n";
-          std::cout << "number of species defined in planet.in file : "
-                    << lines.size() << "\n";
-          std::cout << "These don't match!\n";
-          iErr = 1;
-        } else {
-          // assume order of rows right now:
-          // name, mass, vibration, thermal_cond, thermal_exp, advect, lower BC
-
-          for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
-            report.print(5, "setting neutral species " + lines[iSpecies + 1][0]);
-            species[iSpecies].cName = lines[iSpecies + 1][0];
-            species[iSpecies].mass = stof(lines[iSpecies + 1][1]) * cAMU;
-            species[iSpecies].vibe = stof(lines[iSpecies + 1][2]);
-            species[iSpecies].thermal_cond = stof(lines[iSpecies + 1][3]);
-            species[iSpecies].thermal_exp = stof(lines[iSpecies + 1][4]);
-            species[iSpecies].DoAdvect = stoi(lines[iSpecies + 1][5]);
-            species[iSpecies].lower_bc_density = stof(lines[iSpecies + 1][6]);
-          }  // iSpecies
-        }  // else size
-      }  // #neutrals
-
-      if (hash == "#temperature") {
-
-        report.print(4, "Found #temperatures!");
-
-        std::vector<std::vector<std::string>> temps = read_csv(infile_ptr);
-
-        int nTemps = temps.size() - 1;
-        initial_temperatures =
-          static_cast<float*>(malloc(nTemps * sizeof(float)));
-        initial_altitudes =
-          static_cast<float*>(malloc(nTemps * sizeof(float)));
-
-        for (int iTemp = 0; iTemp < nTemps; iTemp++) {
-          report.print(5, "reading initial temp alt " + temps[iTemp + 1][0]);
-          // convert altitudes from km to m
-          initial_altitudes[iTemp] = stof(temps[iTemp + 1][0]) * 1000;
-          initial_temperatures[iTemp] = stof(temps[iTemp + 1][1]);
-        }  // for iTemp
-
-        nInitial_temps = nTemps;
-      }  // #temperature
-
-      if (infile_ptr.eof())
-        IsDone = 1;
-    }   // while !IsDone
-
-    infile_ptr.close();
-  }  // else (isopen)
+  for (int i = 0; i < nInitial_temps; i++) {
+    initial_altitudes.push_back(double(temperatures["alt"][i]) * 1000.0);
+    initial_temperatures.push_back(temperatures["temp"][i]);
+  }
 
   return iErr;
 }
@@ -348,6 +295,118 @@ void Neutrals::set_bcs(Report &report) {
 }
 
 //----------------------------------------------------------------------
+// set_horizontal_bcs
+//   iDir tells which direction to set:
+//      iDir = 0 -> +x
+//      iDir = 1 -> +y
+//      iDir = 2 -> -x
+//      iDir = 3 -> -y
+//----------------------------------------------------------------------
+
+void Neutrals::set_horizontal_bcs(int64_t iDir, Grid grid, Report &report) {
+
+  std::string function = "Neutrals::set_horizontal_bcs";
+  static int iFunction = -1;
+  report.enter(function, iFunction);
+
+  int64_t nX = grid.get_nX(), iX;
+  int64_t nY = grid.get_nY(), iY;
+  int64_t nAlts = grid.get_nAlts(), iAlt;
+  int64_t nGCs = grid.get_nGCs();
+  int64_t iV;
+
+  // iDir = 0 is right BC:
+  if (iDir == 0) {
+    for (iX = nX - nGCs; iX < nX; iX++) {
+      for (iY = 0; iY < nY; iY++) {
+        // Constant Gradient for Temperature:
+        temperature_scgc.tube(iX, iY) =
+          2 * temperature_scgc.tube(iX - 1, iY) -
+          temperature_scgc.tube(iX - 2, iY);
+
+        // Constant Value for Velocity:
+        for (iV = 0; iV < 3; iV++)
+          velocity_vcgc[iV].tube(iX, iY) = velocity_vcgc[iV].tube(iX - 1, iY);
+
+        // Constant Gradient for densities:
+        for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++)
+          species[iSpecies].density_scgc.tube(iX, iY) =
+            2 * species[iSpecies].density_scgc.tube(iX - 1, iY) -
+            species[iSpecies].density_scgc.tube(iX - 2, iY);
+      }
+    }
+  }
+
+  // iDir = 2 is left BC:
+  if (iDir == 2) {
+    for (iX = nGCs - 1; iX >= 0; iX--) {
+      for (iY = 0; iY < nY; iY++) {
+        // Constant Gradient for Temperature:
+        temperature_scgc.tube(iX, iY) =
+          2 * temperature_scgc.tube(iX + 1, iY) -
+          temperature_scgc.tube(iX + 2, iY);
+
+        // Constant Value for Velocity:
+        for (iV = 0; iV < 3; iV++)
+          velocity_vcgc[iV].tube(iX, iY) = velocity_vcgc[iV].tube(iX + 1, iY);
+
+        // Constant Gradient for densities:
+        for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++)
+          species[iSpecies].density_scgc.tube(iX, iY) =
+            2 * species[iSpecies].density_scgc.tube(iX + 1, iY) -
+            species[iSpecies].density_scgc.tube(iX + 2, iY);
+      }
+    }
+  }
+
+  // iDir = 1 is upper BC:
+  if (iDir == 1) {
+    for (iX = 0; iX < nX; iX++) {
+      for (iY = nX - nGCs; iY < nY; iY++) {
+        // Constant Gradient for Temperature:
+        temperature_scgc.tube(iX, iY) =
+          2 * temperature_scgc.tube(iX, iY - 1) -
+          temperature_scgc.tube(iX, iY - 2);
+
+        // Constant Value for Velocity:
+        for (iV = 0; iV < 3; iV++)
+          velocity_vcgc[iV].tube(iX, iY) = velocity_vcgc[iV].tube(iX, iY - 1);
+
+        // Constant Gradient for densities:
+        for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++)
+          species[iSpecies].density_scgc.tube(iX, iY) =
+            2 * species[iSpecies].density_scgc.tube(iX, iY - 1) -
+            species[iSpecies].density_scgc.tube(iX, iY - 2);
+      }
+    }
+  }
+
+  // iDir = 2 is left BC:
+  if (iDir == 3) {
+    for (iX = 0; iX < nX; iX++) {
+      for (iY = nGCs - 1; iY >= 0; iY--) {
+        // Constant Gradient for Temperature:
+        temperature_scgc.tube(iX, iY) =
+          2 * temperature_scgc.tube(iX, iY + 1) -
+          temperature_scgc.tube(iX, iY + 2);
+
+        // Constant Value for Velocity:
+        for (iV = 0; iV < 3; iV++)
+          velocity_vcgc[iV].tube(iX, iY) = velocity_vcgc[iV].tube(iX, iY + 1);
+
+        // Constant Gradient for densities:
+        for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++)
+          species[iSpecies].density_scgc.tube(iX, iY) =
+            2 * species[iSpecies].density_scgc.tube(iX, iY + 1) -
+            species[iSpecies].density_scgc.tube(iX, iY + 2);
+      }
+    }
+  }
+
+  report.exit(function);
+}
+
+//----------------------------------------------------------------------
 // return the index of the requested species
 // This will return -1 if the species is not found or name is empty
 //----------------------------------------------------------------------
@@ -378,50 +437,64 @@ int Neutrals::get_species_id(std::string name, Report &report) {
 //----------------------------------------------------------------------
 
 bool Neutrals::restart_file(std::string dir, bool DoRead) {
+
   std::string filename;
   bool DidWork = true;
-  json description;
+  int64_t iVar;
+  std::string cName;
 
-  // Output Densities
-  for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
-    filename = dir + "/neu_s" + tostr(iSpecies, 2) + "_n.bin";
+  OutputContainer RestartContainer;
+  RestartContainer.set_netcdf();
+  RestartContainer.set_directory(dir);
+  RestartContainer.set_filename("neutrals_" + cMember + "_" + cGrid);
 
-    if (DidWork)
-      if (DoRead)
-        DidWork = species[iSpecies].density_scgc.load(filename);
-      else {
-        DidWork = species[iSpecies].density_scgc.save(filename);
-        description["density"][species[iSpecies].cName] = filename;
-      }
-  }
-
-  // Output Temperature
-  filename = dir + "/neu_t.bin";
-
-  if (DidWork)
+  try {
     if (DoRead)
-      DidWork = temperature_scgc.load(filename);
+      RestartContainer.read_container_netcdf();
     else {
-      DidWork = temperature_scgc.save(filename);
-      description["temperature"]["bulk"] = filename;
+      RestartContainer.set_version(0.1);
+      RestartContainer.set_time(0.0);
     }
 
-  // Output Velocity
-  for (int iComp = 0; iComp < 3; iComp++) {
-    filename = dir + "/neu_v" + tostr(iComp, 1) + ".bin";
+    for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
+      cName = species[iSpecies].cName;
 
-    if (DidWork)
       if (DoRead)
-        DidWork = velocity_vcgc[iComp].load(filename);
-      else {
-        DidWork = velocity_vcgc[iComp].save(filename);
-        description["vel_comp" + tostr(iComp, 1)]["bulk"] = filename;
-      }
-  }
+        species[iSpecies].density_scgc =
+          RestartContainer.get_element_value(cName);
+      else
+        RestartContainer.store_variable(cName,
+                                        density_unit,
+                                        species[iSpecies].density_scgc);
+    }
 
-  if (!DoRead && DidWork) {
-    filename = dir + "/neutrals.json";
-    DidWork = write_json(filename, description);
+    cName = temperature_name;
+
+    if (DoRead)
+      temperature_scgc = RestartContainer.get_element_value(cName);
+    else
+      RestartContainer.store_variable(cName,
+                                      temperature_unit,
+                                      temperature_scgc);
+
+    for (int iDir = 0; iDir < 3; iDir++) {
+      cName = velocity_name[iDir];
+
+      if (DoRead)
+        velocity_vcgc[iDir] = RestartContainer.get_element_value(cName);
+      else
+        RestartContainer.store_variable(cName,
+                                        velocity_unit,
+                                        velocity_vcgc[iDir]);
+    }
+
+    if (!DoRead) {
+      RestartContainer.write();
+      RestartContainer.clear_variables();
+    }
+  } catch (...) {
+    std::cout << "Error reading in neutral restart file!\n";
+    DidWork = false;
   }
 
   return DidWork;
