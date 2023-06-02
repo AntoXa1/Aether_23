@@ -4,18 +4,22 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_C_COMPILER "/opt/local/bin/gcc")
 set(CMAKE_CXX_COMPILER "/opt/local/bin/g++")
 
-
 project(Aether LANGUAGES CXX
                VERSION   2021.0)
 
+
 # Directory variables
+
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
+
 set(MAIN_DIR ${PROJECT_SOURCE_DIR}/src/main)
 set(TESTS_DIR ${PROJECT_SOURCE_DIR}/tests)
 set(OUT_DIR ${PROJECT_SOURCE_DIR}/src/output)
 set(RUN_DIR ${PROJECT_SOURCE_DIR}/run)
 
-add_executable(aether ${SRC_FILES} ${MAIN_DIR}/main.cpp)
+# add_executable(aether ${SRC_FILES} ${MAIN_DIR}/main.cpp)
+
+add_executable(aether ${SRC_FILES} ${MAIN_DIR}/test_mgrid.cpp)
 
 if(USE_DOUBLE_PRECISION)
   add_compile_definitions(AETHER_USE_PRECISION_DOUBLE)
@@ -26,6 +30,7 @@ endif()
 
 # Set compiler and cmake options
 target_compile_options(aether PUBLIC -ffast-math -O3)
+
 set(SHARE_INCLUDE ${PROJECT_SOURCE_DIR}/share/include)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -42,9 +47,13 @@ include_directories(${SHARE_INCLUDE})
 
 # Find dependencies
 find_package(Armadillo REQUIRED)
+
+# if(Armadillo)
+
 target_include_directories(aether PUBLIC ${ARMADILLO_INCLUDE_DIRS})
 find_package(BLAS)
 find_package(LAPACK)
+
 if(BLAS_FOUND AND LAPACK_FOUND)
   set(ARMA_DONT_USE_WRAPPER True)
   set(ARMA_USE_BLAS True)

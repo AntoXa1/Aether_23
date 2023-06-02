@@ -444,7 +444,10 @@ bool Neutrals::restart_file(std::string dir, bool DoRead) {
   std::string cName;
 
   OutputContainer RestartContainer;
+  
   RestartContainer.set_netcdf();
+
+
   RestartContainer.set_directory(dir);
   RestartContainer.set_filename("neutrals_" + cMember + "_" + cGrid);
 
@@ -456,13 +459,15 @@ bool Neutrals::restart_file(std::string dir, bool DoRead) {
       RestartContainer.set_time(0.0);
     }
 
-    for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
+    for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++){
       cName = species[iSpecies].cName;
 
       if (DoRead)
         species[iSpecies].density_scgc =
           RestartContainer.get_element_value(cName);
       else
+
+      // Attn!!
         RestartContainer.store_variable(cName,
                                         density_unit,
                                         species[iSpecies].density_scgc);
@@ -489,6 +494,8 @@ bool Neutrals::restart_file(std::string dir, bool DoRead) {
     }
 
     if (!DoRead) {
+      // Attn #2
+
       RestartContainer.write();
       RestartContainer.clear_variables();
     }

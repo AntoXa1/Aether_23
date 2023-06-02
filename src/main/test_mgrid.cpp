@@ -25,6 +25,17 @@ int main() {
   // Create inputs (reading the input file):
   Inputs input(time, report);
 
+    Quadtree quadtree(input, report);
+    if (!quadtree.is_ok())
+      throw std::string("quadtree initialization failed!");
+
+// Initialize MPI and parallel aspects of the code:
+    bool DidWork = init_parallel(input, quadtree, report);
+    if (!DidWork)
+      throw std::string("init_parallel failed!");
+  
+// we may need to add mag-quadtree here or somth.
+
   // Initialize the EUV system:
   // Euv euv(input, report);
 
@@ -34,11 +45,6 @@ int main() {
   // Initialize the indices (and read the files):
   Indices indices(input);
   iErr = read_and_store_indices(indices, input, report);
-
-// ---- AD
-    Quadtree quadtree(input, report);
-    if (!quadtree.is_ok())
-      throw std::string("quadtree initialization failed!");
 
 
   // Initialize Geographic grid:
@@ -60,5 +66,9 @@ int main() {
 
   report.exit(function);
   report.times();
+
+// End parallel tasks:
+  iErr = MPI_Finalize();
+
   return iErr;
 }

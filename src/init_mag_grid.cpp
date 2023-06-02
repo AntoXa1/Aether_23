@@ -65,9 +65,11 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   
   for (iLon=0; iLon < nLons; iLon++) {
     for (iAlt=0; iAlt < nAlts; iAlt++) {
+      
       //magP_scgc.subcube(iLon, 0, iAlt, iLon, nLats-1, iAlt) = lshell;
       for (iLat=0; iLat<nLats; iLat++){
 	//cout << "L fill " << lshell[iLat] << endl;
+
 	magP_scgc(iLon, iLat, iAlt) = lshell[iLat];
 	//if (iLon==12 and iLat==10 and iAlt==1){
 	  //cout << iLon<<" "<< iLat <<" "<< iAlt <<" P fill " << magP_scgc(iLon,iLat,iAlt) << endl;
