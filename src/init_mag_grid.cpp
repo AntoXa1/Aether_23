@@ -23,14 +23,13 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   Inputs::grid_input_struct grid_input = input.get_grid_inputs();
   
   int64_t iLon, iLat, iAlt;
-
-
   
   // Longitudes:
   // - Make a 1d vector
   // - copy it into the 3d cube
   fvec lon1d(nLons);
   float dlon = (grid_input.lon_max - grid_input.lon_min) / (nLons-2*nGCs);
+
   for (iLon=0; iLon < nLons; iLon++)
     lon1d[iLon] = grid_input.lon_min + (iLon-nGCs+0.5) * dlon;
   
@@ -40,6 +39,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
       magPhi_scgc.subcube(0, iLat, iAlt, nLons-1, iLat, iAlt) = lon1d;
     }
   }
+  
   cout << "!!!!!!!!!!! HA1 "<< nLats<<endl;
   
   // Latitudes:
@@ -54,7 +54,9 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   float dlat = (grid_input.lat_max - grid_input.lat_min) / (nLats-2*nGCs);
   
   lshell(0) = 1/pow(cos(grid_input.lat_min),2.0);
+  
   lshell(nLats-1) = 1/pow(cos(grid_input.lat_max),2.0);
+
   float dlshell = (lshell(nLats-1)-lshell(0))/nLats;
   
   for (iLat=1; iLat < nLats; iLat++){
@@ -115,7 +117,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
 
       //copy this q array into
       for (iAlt=0;iAlt<nAlts; iAlt++){
-	magQ_scgc(iLon, iLat, iAlt) = q[iAlt];
+	      magQ_scgc(iLon, iLat, iAlt) = q[iAlt];
       }
     }
   }
@@ -502,7 +504,9 @@ void Grid::fill_dipole_q_line(float qN, float qS, float Gamma, int nZ, float Lsh
   // x from equation 7, and then dividing that into
   // equal segments.
   //Dx = 2.0*(1.0-sinh(Gamma*qN))/((static_cast<float>(nZ)-1.0)*sinh(Gamma*qS));
+
   Dx = (sinh(Gamma*qS)-sinh(Gamma*qN))/((static_cast<float>(nZ)-1.0)*sinh(Gamma*qS));
+  
   //Dx = 2.0/(static_cast<float>(nZ)-1.0);
   //Dx = (static_cast<double>(qN)-static_cast<double>(qS))/(static_cast<double>(nZ)-1.0);
 
