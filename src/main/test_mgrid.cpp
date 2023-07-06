@@ -10,6 +10,7 @@
 // as a library in another code, such as the SWMF.
 // -----------------------------------------------------------------------------
 
+
 int main() {
 
   int iErr = 0;
@@ -39,17 +40,29 @@ int main() {
   Grid gGrid(input.get_nLonsGeo(),
        input.get_nLatsGeo(),
        input.get_nAltsGeo(), nGeoGhosts);
-  gGrid.init_geo_grid(planet, input, report);
+
+//   gGrid.init_geo_grid(planet, input, report);
+
+// AD:
+  Quadtree quadtree(input, report);
+    
+  if (!quadtree.is_ok())
+      throw std::string("quadtree initialization failed!");
+  gGrid.init_geo_grid(quadtree, planet, input, report);
+  
   gGrid.fill_grid(planet, report);
 
   // Initialize Magnetic grid:
   cout << "input.get_nAltsMag() " <<input.get_nAltsMag()<<endl;
+
   Grid mGrid(input.get_nLonsMag(),
        input.get_nLatsMag(),
-       input.get_nAltsMag(),nMagGhosts);
+       input.get_nAltsMag(), nMagGhosts);
+
   mGrid.init_mag_grid(planet, input, report);
 
   report.exit(function);
   report.times();
+
   return iErr;
 }

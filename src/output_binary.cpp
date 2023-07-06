@@ -69,7 +69,7 @@ int write_binary_all_3d(std::string file_name,
   // Neutral States
   if (type_output == "neutrals" ||
       type_output == "states") {    
-    for (int iSpecies=0; iSpecies < nSpecies; iSpecies++)
+    for (int iSpecies=0; iSpecies < neutrals.nSpecies; iSpecies++)
       output_variable_3d(binary, neutrals.species[iSpecies].density_scgc);
     output_variable_3d(binary, neutrals.temperature_scgc);
   }
@@ -77,7 +77,7 @@ int write_binary_all_3d(std::string file_name,
   // Ion States:
   if (type_output == "ions" ||
       type_output == "states") {
-    for (int iSpecies=0; iSpecies < nIons+1; iSpecies++) 
+    for (int iSpecies=0; iSpecies < ions.nSpecies+1; iSpecies++) 
       output_variable_3d(binary, ions.species[iSpecies].density_scgc);
     output_variable_3d(binary, ions.potential_scgc);
   }
@@ -121,12 +121,12 @@ int write_header(std::string file_name,
   if (type_output == "neutrals" ||
       type_output == "states")
     // All neutrals, temperature
-    nVars = nVars + nSpecies + 1;
+    nVars = nVars + neutrals.nSpecies + 1;
 
   if (type_output == "ions" ||
       type_output == "states")
     // All ions, electrons, potential:
-    nVars = nVars + nIons + 1 + 1;
+    nVars = nVars + ions.nSpecies + 1 + 1;
   
   if (type_output == "bfield")
     nVars = nVars + 6;
@@ -163,7 +163,7 @@ int write_header(std::string file_name,
   if (type_output == "neutrals" ||
       type_output == "states") {
     
-    for (int iSpecies=0; iSpecies < nSpecies; iSpecies++) {
+    for (int iSpecies=0; iSpecies < neutrals.nSpecies; iSpecies++) {
       header << iVar << " "
 	     << neutrals.species[iSpecies].cName << " "
 	     << neutrals.density_unit << "\n";
@@ -179,7 +179,7 @@ int write_header(std::string file_name,
   if (type_output == "ions" ||
       type_output == "states") {
     
-    for (int iSpecies=0; iSpecies < nIons+1; iSpecies++) {
+    for (int iSpecies=0; iSpecies < ions.nSpecies+1; iSpecies++) {
       header << iVar << " "
 	     << ions.species[iSpecies].cName << " "
 	     << neutrals.density_unit << "\n";

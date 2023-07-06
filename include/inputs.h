@@ -13,8 +13,9 @@ public:
 
   Inputs(Times &time, Report &report);
   int read(Times &time, Report &report);
-  int read_inputs_json(Times &time, Report &report);
+  bool read_inputs_json(Times &time, Report &report);
   int get_verbose();
+  int get_verbose_proc();
   precision_t get_dt_euv();
   precision_t get_dt_report();
   precision_t get_n_outputs();
@@ -25,6 +26,7 @@ public:
   std::string get_euv_file();
   std::string get_aurora_file();
   std::string get_chemistry_file();
+  std::string get_indices_lookup_file();
   std::vector<std::string> get_omniweb_files();
   int get_number_of_omniweb_files();
   std::string get_f107_file();
@@ -32,12 +34,26 @@ public:
   std::string get_planetary_file();
   std::string get_planet_species_file();
   std::string get_collision_file();
+  bool get_do_calc_bulk_ion_temp();
   std::string get_bfield_type();
   std::string get_electrodynamics_file();
   bool get_do_restart();
   std::string get_restartout_dir();
   std::string get_restartin_dir();
   precision_t get_dt_write_restarts();
+  int get_original_seed();
+  int get_updated_seed();
+  void set_seed(int seed);
+  bool write_restart();
+  json get_perturb_values();  
+
+  bool get_is_cubesphere();
+
+  std::string get_student_name();
+  bool get_is_student();
+  
+  json get_initial_condition_types();
+  json get_boundary_condition_types();
   
   // ------------------------------
   // Grid inputs:
@@ -61,17 +77,38 @@ public:
   int get_nLatsGeo();
   int get_nAltsGeo();
 
+  int get_nBlocksLonGeo();
+  int get_nBlocksLatGeo();
+
+  int get_nMembers();
+
   int get_nLonsMag();
   int get_nLatsMag();
   int get_nAltsMag();
 
   int iVerbose;
+  int iVerboseProc;
   int iTimingDepth;
+  std::string get_logfile();
+  std::vector<std::string> get_species_vector();
+  bool get_logfile_append();
+  precision_t get_logfile_dt();
 
+  // Satellites
+  std::vector<std::string> get_satellite_files();
+  std::vector<std::string> get_satellite_names();
+  std::vector<precision_t> get_satellite_dts();
+  
   std::string get_settings_str(std::string key1);
   std::string get_settings_str(std::string key1, std::string key2);
   std::vector<int> get_settings_timearr(std::string key1);
   std::vector<int> get_settings_intarr(std::string key1);
+  
+  /**********************************************************************
+     \brief Check to see if internal state of class is ok
+   **/
+  
+  bool is_ok();
   
 private:
 
@@ -116,6 +153,11 @@ private:
   int nLonsGeo;
   int nLatsGeo;
   int nAltsGeo;
+
+  int updated_seed;
+  
+  /// An internal variable to hold the state of the class
+  bool IsOk;
 
   int nLonsMag;
   int nLatsMag;

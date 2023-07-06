@@ -89,10 +89,111 @@ Inputs::Inputs(Times &time, Report &report) {
 
   // ------------------------------------------------
   // Now read the input file:
-  int iErr = read_inputs_json(time, report);
+  IsOk = read_inputs_json(time, report);
 
-  if (iErr > 0)
+  if (!IsOk && iProc == 0)
     std::cout << "Error in reading input file!\n";
+}
+
+// -----------------------------------------------------------------------
+// output the settings json to a file (for restart)
+// -----------------------------------------------------------------------
+
+bool Inputs::write_restart() {
+  bool DidWork = true;
+
+  if (iProc == 0) {
+    std::string filename = settings["Restart"]["OutDir"];
+    filename = filename + "/settings.json";
+    DidWork = write_json(filename, settings);
+  }
+
+  DidWork = sync_across_all_procs(DidWork);
+  return DidWork;
+}
+
+// -----------------------------------------------------------------------
+// Return log file name
+// -----------------------------------------------------------------------
+
+std::string Inputs::get_logfile() {
+  return settings["Logfile"]["name"];
+}
+
+// -----------------------------------------------------------------------
+// Return how oftern to write log file
+// -----------------------------------------------------------------------
+
+precision_t Inputs::get_logfile_dt() {
+  return settings["Logfile"]["dt"];
+}
+
+// -----------------------------------------------------------------------
+// Return whether to append or rewrite
+// -----------------------------------------------------------------------
+
+bool Inputs::get_logfile_append() {
+  return settings["Logfile"]["append"];
+}
+
+// -----------------------------------------------------------------------
+// Return the name of specified variables as a vector
+// -----------------------------------------------------------------------
+
+std::vector<std::string> Inputs::get_species_vector() {
+  std::vector<std::string> species;
+  const json &json_species = settings["Logfile"]["species"];
+
+  for (size_t iOutput = 0; iOutput < json_species.size(); iOutput++) {
+    species.push_back(json_species.at(iOutput));
+  }
+
+  return species;
+}
+
+// -----------------------------------------------------------------------
+// Return the name of satellite files as a vector
+// -----------------------------------------------------------------------
+
+std::vector<std::string> Inputs::get_satellite_files() {
+    std::vector<std::string> files;
+    const json &json_files = settings["Satellites"]["files"];
+
+    for (size_t i = 0; i < json_files.size(); ++i) {
+        files.push_back(json_files.at(i));
+    }
+
+    return files;
+}
+
+// -----------------------------------------------------------------------
+// Return the output file names of satellites as a vector
+// -----------------------------------------------------------------------
+
+std::vector<std::string> Inputs::get_satellite_names() {
+    std::vector<std::string> names;
+    const json &json_names = settings["Satellites"]["names"];
+
+    for (size_t i = 0; i < json_names.size(); ++i) {
+        names.push_back(json_names.at(i));
+    }
+
+    return names;
+}
+
+// -----------------------------------------------------------------------
+// Return how oftern to write log file for satellites as a vector
+// -----------------------------------------------------------------------
+
+std::vector<precision_t> Inputs::get_satellite_dts() {
+    std::vector<precision_t> dts;
+    const json &json_dts = settings["Satellites"]["dts"];
+
+    for (size_t i = 0; i < json_dts.size(); ++i) {
+        dts.push_back(json_dts.at(i));
+    }
+
+    return dts;
 }
 
 
@@ -166,13 +267,41 @@ Inputs::grid_input_struct Inputs::get_grid_inputs() {
 
   // Second Change Units
   geo_grid_input.alt_min = geo_grid_input.alt_min * cKMtoM;
-  geo_grid_input.dalt = geo_grid_input.dalt * cKMtoM;
   geo_grid_input.lat_min = geo_grid_input.lat_min * cDtoR;
   geo_grid_input.lat_max = geo_grid_input.lat_max * cDtoR;
   geo_grid_input.lon_min = geo_grid_input.lon_min * cDtoR;
   geo_grid_input.lon_max = geo_grid_input.lon_max * cDtoR;
 
+  // If the grid is uniform, dalt is in km, else it is in fractions of
+  // scale height:
+  if (geo_grid_input.IsUniformAlt)
+    geo_grid_input.dalt = geo_grid_input.dalt * cKMtoM;
+
   return geo_grid_input;
+}
+
+// -----------------------------------------------------------------------
+// Return whether user is student
+// -----------------------------------------------------------------------
+
+bool Inputs::get_is_student() {
+  return settings["Student"]["is"];
+}
+
+// -----------------------------------------------------------------------
+// Return student name
+// -----------------------------------------------------------------------
+
+std::string Inputs::get_student_name() {
+  return settings["Student"]["name"];
+}
+
+// -----------------------------------------------------------------------
+// Return whether grid is cubesphere or spherical
+// -----------------------------------------------------------------------
+
+bool Inputs::get_is_cubesphere() {
+  return settings["CubeSphere"]["is"];
 }
 
 // -----------------------------------------------------------------------
@@ -256,7 +385,34 @@ precision_t Inputs::get_n_outputs() {
 }
 
 // -----------------------------------------------------------------------
-// Return number of longitudes, latitudes, and altitudes in geo grid
+// Return original random number seed
+// -----------------------------------------------------------------------
+
+int Inputs::get_original_seed() {
+  return settings["Seed"];
+}
+
+// -----------------------------------------------------------------------
+// Set random number seed
+// -----------------------------------------------------------------------
+
+void Inputs::set_seed(int seed) {
+  settings["Seed"] = seed;
+  updated_seed = seed;
+}
+
+// -----------------------------------------------------------------------
+// Return random number seed that has been updated
+// -----------------------------------------------------------------------
+
+int Inputs::get_updated_seed() {
+  std::default_random_engine get_random(updated_seed);
+  updated_seed = get_random();
+  return updated_seed;
+}
+
+// -----------------------------------------------------------------------
+// Return number of longitudes, latitudes, and altitudes in geo Geo grid
 // -----------------------------------------------------------------------
 
 int Inputs::get_nLonsGeo() {
@@ -269,6 +425,38 @@ int Inputs::get_nLatsGeo() {
 
 int Inputs::get_nAltsGeo() {
   return settings["GeoBlockSize"]["nAlts"];
+}
+
+// -----------------------------------------------------------------------
+// Return number of Blocks of longitudes and latitudes in Geo grid
+// -----------------------------------------------------------------------
+
+int Inputs::get_nBlocksLonGeo() {
+  return settings["GeoBlockSize"]["nBlocksLon"];
+}
+
+int Inputs::get_nBlocksLatGeo() {
+  return settings["GeoBlockSize"]["nBlocksLat"];;
+}
+
+// -----------------------------------------------------------------------
+// Return number of ensemble members
+// -----------------------------------------------------------------------
+
+int Inputs::get_nMembers() {
+  return settings["Ensembles"]["nMembers"];
+}
+
+// -----------------------------------------------------------------------
+// Return verbose variables
+// -----------------------------------------------------------------------
+
+int Inputs::get_verbose() {
+  return settings["Debug"]["iVerbose"];
+}
+
+int Inputs::get_verbose_proc() {
+  return settings["Debug"]["iProc"];
 }
 
 // -----------------------------------------------------------------------
@@ -347,6 +535,13 @@ std::string Inputs::get_collision_file() {
   return settings["CollisionsFile"];
 }
 
+// -----------------------------------------------------------------------
+// Return Indices Lookup Filename
+// -----------------------------------------------------------------------
+
+std::string Inputs::get_indices_lookup_file() {
+  return settings["IndicesLookupFile"];
+}
 
 // -----------------------------------------------------------------------
 // Return total number of OMNIWeb files to read
@@ -407,3 +602,58 @@ std::string Inputs::get_electrodynamics_file() {
   return settings["ElectrodynamicsFile"];
 }
 
+// -----------------------------------------------------------------------
+// Flag to do the bulk ion temperature calculation instead
+// of individual ion specie temperature calculations
+// -----------------------------------------------------------------------
+
+bool Inputs::get_do_calc_bulk_ion_temp() {
+  return settings["DoCalcBulkIonTemp"];
+}
+
+// -----------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------
+
+json Inputs::get_perturb_values() {
+  json values;
+
+  if (settings.contains("Perturb"))
+    values = settings["Perturb"];
+
+  return values;
+}
+
+// -----------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------
+
+json Inputs::get_initial_condition_types() {
+  json values;
+
+  if (settings.contains("InitialConditions"))
+    values = settings["InitialConditions"];
+
+  return values;
+}
+
+// -----------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------
+
+json Inputs::get_boundary_condition_types() {
+  json values;
+
+  if (settings.contains("BoundaryConditions"))
+    values = settings["BoundaryConditions"];
+
+  return values;
+}
+
+// --------------------------------------------------------------------------
+// check to see if class is ok
+// --------------------------------------------------------------------------
+
+bool Inputs::is_ok() {
+  return IsOk;
+}

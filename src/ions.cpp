@@ -36,7 +36,7 @@ Ions::species_chars Ions::create_species(Grid grid) {
   tmp.par_velocity_vcgc = make_cube_vector(nLons, nLats, nAlts, 3);
   tmp.perp_velocity_vcgc = make_cube_vector(nLons, nLats, nAlts, 3);
 
-  tmp.nu_ion_neutral_vcgc = make_cube_vector(nLons, nLats, nAlts, nSpecies);
+  //tmp.nu_ion_neutral_vcgc = make_cube_vector(nLons, nLats, nAlts, nSpecies);
 
   return tmp;
 }
@@ -45,7 +45,7 @@ Ions::species_chars Ions::create_species(Grid grid) {
 //  Initialize Ions class
 // -----------------------------------------------------------------------------
 
-Ions::Ions(Grid grid, Inputs input, Report report) {
+Ions::Ions(Grid grid, Planets planet, Inputs input, Report report) {
 
   int64_t nLons = grid.get_nLons();
   int64_t nLats = grid.get_nLats();
@@ -55,10 +55,22 @@ Ions::Ions(Grid grid, Inputs input, Report report) {
 
   report.print(2, "Initializing Ions");
 
-  for (int iSpecies = 0; iSpecies < nIons; iSpecies++) {
+  for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
     tmp = create_species(grid);
     species.push_back(tmp);
   }
+
+  velocity_name.push_back("Ion Velocity (Zonal)");
+  velocity_name.push_back("Ion Velocity (Meridional)");
+  velocity_name.push_back("Ion Velocity (Vertical)");
+
+  par_velocity_name.push_back("Parallel Ion Velocity (Zonal)");
+  par_velocity_name.push_back("Parallel Ion Velocity (Meridional)");
+  par_velocity_name.push_back("Parallel Ion Velocity (Vertical)");
+
+  perp_velocity_name.push_back("Perp. Ion Velocity (Zonal)");
+  perp_velocity_name.push_back("Perp. Ion Velocity (Meridional)");
+  perp_velocity_name.push_back("Perp. Ion Velocity (Vertical)");
 
   // Create one extra species for electrons
   tmp = create_species(grid);
@@ -69,8 +81,8 @@ Ions::Ions(Grid grid, Inputs input, Report report) {
   density_scgc.set_size(nLons, nLats, nAlts);
   density_scgc.ones();
   velocity_vcgc = make_cube_vector(nLons, nLats, nAlts, 3);
-  ion_temperature_scgc.set_size(nLons, nLats, nAlts);
-  ion_temperature_scgc.ones();
+  temperature_scgc.set_size(nLons, nLats, nAlts);
+  temperature_scgc.ones();
   electron_temperature_scgc.set_size(nLons, nLats, nAlts);
   electron_temperature_scgc.ones();
 
@@ -82,6 +94,8 @@ Ions::Ions(Grid grid, Inputs input, Report report) {
   potential_scgc.set_size(nLons, nLats, nAlts);
   potential_scgc.zeros();
 
+  conduction_scgc.set_size(nLons, nLats, nAlts);
+
   eflux.set_size(nLons, nLats);
   eflux.zeros();
   avee.set_size(nLons, nLats);
@@ -91,6 +105,9 @@ Ions::Ions(Grid grid, Inputs input, Report report) {
   efield_vcgc = make_cube_vector(nLons, nLats, nAlts, 3);
   exb_vcgc = make_cube_vector(nLons, nLats, nAlts, 3);
 
+  // This gets a bunch of the species-dependent characteristics:
+  int iErr = read_planet_file(planet, input, report);
+
   if (input.get_do_restart()) {
     report.print(1, "Restarting! Reading ion files!");
     bool DidWork = restart_file(input.get_restartin_dir(), DoRead);
@@ -98,9 +115,6 @@ Ions::Ions(Grid grid, Inputs input, Report report) {
     if (!DidWork)
       std::cout << "Reading Restart for Ions Failed!!!\n";
   }
-
-  // This gets a bunch of the species-dependent characteristics:
-  int iErr = read_planet_file(input, report);
 
   if (iErr > 0)
     std::cout << "Error in reading planet file!" << '\n';
@@ -110,7 +124,7 @@ Ions::Ions(Grid grid, Inputs input, Report report) {
 // Read in the planet file that describes the species - only ions
 // -----------------------------------------------------------------------------
 
-int Ions::read_planet_file(Inputs input, Report report) {
+int Ions::read_planet_file(Planets planet, Inputs input, Report report) {
 
   int iErr = 0;
   std::string hash;
@@ -118,64 +132,26 @@ int Ions::read_planet_file(Inputs input, Report report) {
 
   report.print(3, "In read_planet_file for Ions");
 
-  infile_ptr.open(input.get_planet_species_file());
+  json ions = planet.get_ions();
 
-  if (!infile_ptr.is_open()) {
-    std::cout << "Could not open input file: "
-              << input.get_planet_species_file() << "!!!\n";
-    iErr = 1;
-  } else {
+  nSpecies = ions["name"].size();
 
-    int IsDone = 0;
-
-    while (!IsDone) {
-
-      hash = find_next_hash(infile_ptr);
-
-      if (report.test_verbose(4))
-        std::cout << "hash : -->" << hash << "<--\n";
-
-      if (hash == "#ions") {
-
-        // Read in the characteristics as CSVs:
-        report.print(4, "Found #ions!");
-
-        std::vector<std::vector<std::string>> lines = read_csv(infile_ptr);
-
-        if (lines.size() - 1 != nIons) {
-          std::cout << "num of ion species (nIons) defined in planet.h file : "
-                    << nIons << "\n";
-          std::cout << "number of ions defined in planet.in file : "
-                    << lines.size() << "\n";
-          std::cout << "These don't match!\n";
-          iErr = 1;
-        } else {
-          // assume order of rows right now:
-          // name, mass, charge, advect
-          for (int iSpecies = 0; iSpecies < nIons; iSpecies++) {
-            report.print(5, "setting ion species " + lines[iSpecies + 1][0]);
-            species[iSpecies].cName = lines[iSpecies + 1][0];
-            species[iSpecies].mass = stof(lines[iSpecies + 1][1]) * cAMU;
-            species[iSpecies].charge = stoi(lines[iSpecies + 1][2]);
-            species[iSpecies].DoAdvect = stoi(lines[iSpecies + 1][3]);
-          }
-
-          species[nIons].cName = "e-";
-          species[nIons].mass = cME;
-          species[nIons].charge = -1;
-          species[nIons].DoAdvect = 0;
-        }
-      }
-
-      if (infile_ptr.eof())
-        IsDone = 1;
-    }
-
-    infile_ptr.close();
+  for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
+    species[iSpecies].cName = ions["name"][iSpecies];
+    double mass = ions["mass"][iSpecies];
+    species[iSpecies].mass = mass * cAMU;
+    species[iSpecies].charge = ions["charge"][iSpecies];
+    species[iSpecies].DoAdvect = ions["advect"][iSpecies];
   }
+
+  species[nSpecies].cName = "e-";
+  species[nSpecies].mass = cME;
+  species[nSpecies].charge = -1;
+  species[nSpecies].DoAdvect = 0;
 
   return iErr;
 }
+
 
 // -----------------------------------------------------------------------------
 // Calculate the electron density from the sum of all ion species
@@ -189,13 +165,13 @@ void Ions::fill_electrons(Report &report) {
   static int iFunction = -1;
   report.enter(function, iFunction);
 
-  species[nIons].density_scgc.zeros();
+  species[nSpecies].density_scgc.zeros();
 
-  for (iSpecies = 0; iSpecies < nIons; iSpecies++)
-    species[nIons].density_scgc =
-      species[nIons].density_scgc + species[iSpecies].density_scgc;
+  for (iSpecies = 0; iSpecies < nSpecies; iSpecies++)
+    species[nSpecies].density_scgc =
+      species[nSpecies].density_scgc + species[iSpecies].density_scgc;
 
-  density_scgc = species[nIons].density_scgc;
+  density_scgc = species[nSpecies].density_scgc;
 
   report.exit(function);
   return;
@@ -204,7 +180,7 @@ void Ions::fill_electrons(Report &report) {
 //----------------------------------------------------------------------
 // return the index of the requested species
 // This will return -1 if the species is not found or name is empty
-// Will return nIons for electrons
+// Will return nSpecies for electrons
 //----------------------------------------------------------------------
 
 int Ions::get_species_id(std::string name, Report &report) {
@@ -217,7 +193,7 @@ int Ions::get_species_id(std::string name, Report &report) {
   int id_ = -1;
 
   if (name.length() > 0) {
-    for (iSpecies = 0; iSpecies <= nIons; iSpecies++)
+    for (iSpecies = 0; iSpecies <= nSpecies; iSpecies++)
       if (name == species[iSpecies].cName) {
         id_ = iSpecies;
         break;
@@ -233,87 +209,110 @@ int Ions::get_species_id(std::string name, Report &report) {
 //----------------------------------------------------------------------
 
 bool Ions::restart_file(std::string dir, bool DoRead) {
+
   std::string filename;
   bool DidWork = true;
-  json description;
+  int64_t iVar;
 
-  for (int iSpecies = 0; iSpecies < nIons; iSpecies++) {
+  OutputContainer RestartContainer;
+  RestartContainer.set_directory(dir);
+  RestartContainer.set_filename("ions_" + cMember + "_" + cGrid);
 
-    // Output Densities
-    filename = dir + "/ion_s" + tostr(iSpecies, 2) + "_n.bin";
+  try {
+    if (DoRead)
+      RestartContainer.read_container_netcdf();
+    else {
+      RestartContainer.set_version(0.1);
+      RestartContainer.set_time(0.0);
+    }
 
-    if (DidWork)
+    std::string cName;
+
+    for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
+      // ----------------------------
+      // Density and Temperature (per ion)
+      // ----------------------------
+      cName = species[iSpecies].cName;
+
       if (DoRead)
-        DidWork = species[iSpecies].density_scgc.load(filename);
-      else {
-        DidWork = species[iSpecies].density_scgc.save(filename);
-        description["density"][species[iSpecies].cName] = filename;
+        species[iSpecies].density_scgc =
+          RestartContainer.get_element_value(cName);
+      else
+        RestartContainer.store_variable(cName,
+                                        density_unit,
+                                        species[iSpecies].density_scgc);
+
+      cName = temperature_name + " (" + species[iSpecies].cName + ")";
+
+      if (DoRead)
+        species[iSpecies].temperature_scgc =
+          RestartContainer.get_element_value(cName);
+      else
+        RestartContainer.store_variable(cName,
+                                        temperature_unit,
+                                        species[iSpecies].temperature_scgc);
+
+      // ----------------------------
+      // Parallel Velocity (per ion)
+      // ----------------------------
+      for (int iDir = 0; iDir < 3; iDir++) {
+        cName = par_velocity_name[iDir] + " (" + species[iSpecies].cName + ")";
+
+        if (DoRead)
+          species[iSpecies].par_velocity_vcgc[iDir] =
+            RestartContainer.get_element_value(cName);
+        else
+          RestartContainer.store_variable(cName,
+                                          velocity_unit,
+                                          species[iSpecies].
+                                          par_velocity_vcgc[iDir]);
       }
 
-    // Output Temperature for each species
-    filename = dir + "/ion_s" + tostr(iSpecies, 2) + "_t.bin";
+      // ----------------------------
+      // Perpendicular Velocity (per ion)
+      // ----------------------------
+      for (int iDir = 0; iDir < 3; iDir++) {
+        cName = perp_velocity_name[iDir] + " (" + species[iSpecies].cName + ")";
 
-    if (DidWork)
-      if (DoRead)
-        DidWork = species[iSpecies].temperature_scgc.load(filename);
-      else {
-        DidWork = species[iSpecies].temperature_scgc.save(filename);
-        description["temperature"][species[iSpecies].cName] = filename;
+        if (DoRead)
+          species[iSpecies].perp_velocity_vcgc[iDir] =
+            RestartContainer.get_element_value(cName);
+        else
+          RestartContainer.store_variable(cName,
+                                          velocity_unit,
+                                          species[iSpecies].
+                                          perp_velocity_vcgc[iDir]);
       }
-
-    // Output Velocity (Parallel and Perp) for each species
-    for (int iComp = 0; iComp < 3; iComp++) {
-      filename = dir + "/ion_s" + tostr(iSpecies, 2) + "_vpa" + tostr(iComp,
-                 1) + ".bin";
-
-      if (DidWork)
-        if (DoRead)
-          DidWork = species[iSpecies].par_velocity_vcgc[iComp].load(filename);
-        else {
-          DidWork = species[iSpecies].par_velocity_vcgc[iComp].save(filename);
-          description["vel_par_comp" + tostr(iComp, 1)][species[iSpecies].cName] =
-            filename;
-        }
-
-      filename = dir + "/ion_s" + tostr(iSpecies, 2) + "_vpe" + tostr(iComp,
-                 1) + ".bin";
-
-      if (DidWork)
-        if (DoRead)
-          DidWork = species[iSpecies].perp_velocity_vcgc[iComp].load(filename);
-        else {
-          DidWork = species[iSpecies].perp_velocity_vcgc[iComp].save(filename);
-          description["vel_perp_comp" + tostr(iComp, 1)][species[iSpecies].cName] =
-            filename;
-        }
     }
-  }
 
-  // Output bulk Temperature
-  filename = dir + "/ion_t.bin";
+    // ----------------------------
+    // Bulk ion and electron temperatures
+    // ----------------------------
+    cName = temperature_name + " (bulk ion)";
 
-  if (DidWork)
     if (DoRead)
-      DidWork = ion_temperature_scgc.load(filename);
-    else {
-      DidWork = ion_temperature_scgc.save(filename);
-      description["temperature"]["bulk"] = filename;
-    }
+      temperature_scgc = RestartContainer.get_element_value(cName);
+    else
+      RestartContainer.store_variable(cName,
+                                      temperature_unit,
+                                      temperature_scgc);
 
-  // Output electron Temperature
-  filename = dir + "/ele_t.bin";
+    cName = temperature_name + " (electron)";
 
-  if (DidWork)
     if (DoRead)
-      DidWork = electron_temperature_scgc.load(filename);
-    else {
-      DidWork = electron_temperature_scgc.save(filename);
-      description["temperature"]["electron"] = filename;
-    }
+      electron_temperature_scgc = RestartContainer.get_element_value(cName);
+    else
+      RestartContainer.store_variable(temperature_name + " (electron)",
+                                      temperature_unit,
+                                      electron_temperature_scgc);
 
-  if (!DoRead && DidWork) {
-    filename = dir + "/ions.json";
-    DidWork = write_json(filename, description);
+    if (!DoRead)
+      RestartContainer.write();
+
+    RestartContainer.clear_variables();
+  } catch (...) {
+    std::cout << "Error reading in ion restart file!\n";
+    DidWork = false;
   }
 
   return DidWork;

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 #include <stdlib.h>
-#include <netcdf>
+// #include <netcdf>
 #include "../include/aether.h"
 #include <vector>
 

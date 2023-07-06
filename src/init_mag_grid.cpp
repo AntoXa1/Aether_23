@@ -40,7 +40,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
     }
   }
   
-  cout << "!!!!!!!!!!! HA1 "<< nLats<<endl;
+  cout << "from"<< function<< "nLats=  "<< nLats<<"\n"<<endl;
   
   // Latitudes:
   // - Make a 1d vector
@@ -281,8 +281,6 @@ std::pair<float,float> Grid::lshell_to_qn_qs(Planets planet, float Lshell, float
   // note we normalize Lshell by equatorial radius
   float RadiusEq = planet.get_radius(0.0);
 
-
-  
 
   // loop for qN and qS
   for(int iQ = 0; iQ < 2; iQ++){

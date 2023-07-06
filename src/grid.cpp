@@ -24,6 +24,20 @@ Grid::Grid(int nX_in, int nY_in, int nZ_in, int nGCs_in) {
   geoAlt_scgc.set_size(nX, nY, nZ);
   geoLocalTime_scgc.set_size(nX, nY, nZ);
 
+
+  geoLon_Left.set_size(nX + 1, nY, nZ);
+  geoLat_Left.set_size(nX + 1, nY, nZ);
+
+  geoLon_Down.set_size(nX, nY + 1, nZ);
+  geoLat_Down.set_size(nX, nY + 1, nZ);
+
+  geoLon_Corner.set_size(nX + 1, nY + 1, nZ + 1);
+  geoLat_Corner.set_size(nX + 1, nY + 1, nZ + 1);
+  geoAlt_Corner.set_size(nX + 1, nY + 1, nZ + 1);
+
+  geoAlt_Below.set_size(nX, nY, nZ + 1);
+
+
   geoX_scgc.set_size(nX, nY, nZ);
   geoY_scgc.set_size(nX, nY, nZ);
   geoZ_scgc.set_size(nX, nY, nZ);
@@ -89,23 +103,83 @@ Grid::Grid(int nX_in, int nY_in, int nZ_in, int nGCs_in) {
 // --------------------------------------------------------------------------
 
 bool Grid::write_restart(std::string dir) {
-  std::string filename;
   bool DidWork = true;
-  filename = dir + "/geolons.bin";
 
-  if (DidWork)
-    DidWork = geoLon_scgc.save(filename);
+  // All Ensemble member grids should be the same, so only need to write
+  // out the 0th member
+  if (iMember == 0) {
+    try {
+      OutputContainer RestartContainer;
+      RestartContainer.set_directory(dir);
+      RestartContainer.set_version(0.1);
+      RestartContainer.set_time(0.0);
 
-  filename = dir + "/geolats.bin";
+      // Output Cell Centers
+      RestartContainer.set_filename("grid_" + cGrid);
+      RestartContainer.store_variable(longitude_name,
+                                      longitude_unit,
+                                      geoLon_scgc);
+      RestartContainer.store_variable(latitude_name,
+                                      latitude_unit,
+                                      geoLat_scgc);
+      RestartContainer.store_variable(altitude_name,
+                                      altitude_unit,
+                                      geoAlt_scgc);
+      RestartContainer.write();
+      RestartContainer.clear_variables();
 
-  if (DidWork)
-    DidWork = geoLat_scgc.save(filename);
+      // Output Corners
+      RestartContainer.set_filename("grid_corners_" + cGrid);
+      RestartContainer.store_variable(longitude_name + " Corners",
+                                      longitude_unit,
+                                      geoLon_Corner);
+      RestartContainer.store_variable(latitude_name + " Corners",
+                                      latitude_unit,
+                                      geoLat_Corner);
+      RestartContainer.store_variable(altitude_name + " Corners",
+                                      altitude_unit,
+                                      geoAlt_Corner);
+      RestartContainer.write();
+      RestartContainer.clear_variables();
 
-  filename = dir + "/geoalts.bin";
+      // Output Left Sides
+      RestartContainer.set_filename("grid_left_" + cGrid);
+      RestartContainer.store_variable(longitude_name + " Left",
+                                      longitude_unit,
+                                      geoLon_Left);
+      RestartContainer.store_variable(latitude_name + " Left",
+                                      latitude_unit,
+                                      geoLat_Left);
+      RestartContainer.write();
+      RestartContainer.clear_variables();
 
-  if (DidWork)
-    DidWork = geoAlt_scgc.save(filename);
+      // Output Down Sides
+      RestartContainer.set_filename("grid_down_" + cGrid);
+      RestartContainer.store_variable(longitude_name + " Down",
+                                      longitude_unit,
+                                      geoLon_Down);
+      RestartContainer.store_variable(latitude_name + " Down",
+                                      latitude_unit,
+                                      geoLat_Down);
+      RestartContainer.write();
+      RestartContainer.clear_variables();
 
+      // Output Below
+      RestartContainer.set_filename("grid_below_" + cGrid);
+      RestartContainer.store_variable(altitude_name + " Below",
+                                      altitude_unit,
+                                      geoAlt_Below);
+
+      RestartContainer.write();
+      RestartContainer.clear_variables();
+
+    } catch (...) {
+      std::cout << "Error writing grid restart file!\n";
+      DidWork = false;
+    }
+  }
+
+  DidWork = sync_across_all_procs(DidWork);
   return DidWork;
 }
 
@@ -115,23 +189,58 @@ bool Grid::write_restart(std::string dir) {
 // --------------------------------------------------------------------------
 
 bool Grid::read_restart(std::string dir) {
-  std::string filename;
+
   bool DidWork = true;
-  filename = dir + "/geolons.bin";
+  int64_t iVar;
 
-  if (DidWork)
-    DidWork = geoLon_scgc.load(filename);
+  // While only the 0th ensemble member writes, all ensemble members have
+  // to read the grid.
 
-  filename = dir + "/geolats.bin";
+  try {
+    OutputContainer RestartContainer;
+    RestartContainer.set_directory(dir);
+    RestartContainer.set_version(0.1);
+    // Cell Centers:
+    RestartContainer.set_filename("grid_" + cGrid);
+    RestartContainer.read_container_netcdf();
+    geoLon_scgc = RestartContainer.get_element_value(longitude_name);
+    geoLat_scgc = RestartContainer.get_element_value(latitude_name);
+    geoAlt_scgc = RestartContainer.get_element_value(altitude_name);
+    // Down Edges:
+    RestartContainer.set_filename("grid_below_" + cGrid);
+    RestartContainer.read_container_netcdf();
+    geoAlt_Below = RestartContainer.get_element_value(altitude_name +
+                                                      " Below");
+    // Cell Corners:
+    RestartContainer.set_filename("grid_corners_" + cGrid);
+    RestartContainer.read_container_netcdf();
+    geoLon_Corner = RestartContainer.get_element_value(longitude_name +
+                                                       " Corners");
+    geoLat_Corner = RestartContainer.get_element_value(latitude_name +
+                                                       " Corners");
+    geoAlt_Corner = RestartContainer.get_element_value(altitude_name +
+                                                       " Corners");
+    // Left Edges:
+    RestartContainer.set_filename("grid_left_" + cGrid);
+    RestartContainer.read_container_netcdf();
+    geoLon_Left = RestartContainer.get_element_value(longitude_name +
+                                                     " Left");
+    geoLat_Left = RestartContainer.get_element_value(latitude_name +
+                                                     " Left");
+    // Down Edges:
+    RestartContainer.set_filename("grid_down_" + cGrid);
+    RestartContainer.read_container_netcdf();
+    geoLon_Down = RestartContainer.get_element_value(longitude_name +
+                                                     " Down");
+    geoLat_Down = RestartContainer.get_element_value(latitude_name +
+                                                     " Down");
 
-  if (DidWork)
-    DidWork = geoLat_scgc.load(filename);
+  } catch (...) {
+    std::cout << "Error reading grid restart file!\n";
+    DidWork = false;
+  }
 
-  filename = dir + "/geoalts.bin";
-
-  if (DidWork)
-    DidWork = geoAlt_scgc.load(filename);
-
+  DidWork = sync_across_all_procs(DidWork);
   return DidWork;
 }
 
