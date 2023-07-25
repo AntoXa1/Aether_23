@@ -114,7 +114,6 @@ Neutrals::Neutrals(Grid grid,
 
   // This gets a bunch of the species-dependent characteristics:
   iErr = read_planet_file(planet, input, report);
-
   if (iErr > 0)
     std::cout << "Error reading planet file!" << '\n';
 
@@ -123,6 +122,14 @@ Neutrals::Neutrals(Grid grid,
 
   if (iErr > 0)
     std::cout << "Error in setting neutral initial conditions!" << '\n';
+
+// AD<
+  // project Neutrals on a dipole grid  
+  // iErr = initial_conditions_neutrals_dipole_grid(grid, time, indices, input, report);
+// >AD
+
+  if (iErr > 0)
+    std::cout << "Error in setting neutrals on dipole grid!" << '\n';
 }
 
 // -----------------------------------------------------------------------------
