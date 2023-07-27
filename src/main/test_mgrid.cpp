@@ -1,8 +1,6 @@
 // Copyright 2020, the Aether Development Team (see doc/dev_team.md for members)
 // Full license can be found in License.md
-
 #include <iostream>
-
 #include "../include/aether.h"
 
 // -----------------------------------------------------------------------------
@@ -77,6 +75,16 @@ cout<<"entering : "<< function <<endl;
 cout<<"----------" << "init mgrid is ok"<<endl;
 
   mGrid.init_mag_grid(planet, input, report);
+  
+  // iterate p,q; convert to r,theta,phi; 
+  // p,q, is uniform, while rThPhi is non-uniform
+  // feed and initialize d_neutrals with rThPhi
+
+
+  // Initialize Neutrals on dipole grid:
+  Neutrals d_neutrals(mGrid, planet, time, indices, input, report);
+
+
 
 cout<<"----------" << "init mGrid.mag_grid is ok"<<endl;
 

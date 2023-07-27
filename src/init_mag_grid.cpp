@@ -35,8 +35,11 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   
   for (iLat=0; iLat < nLats; iLat++) {
     for (iAlt=0; iAlt < nAlts; iAlt++) {
+
       magLon_scgc.subcube(0, iLat, iAlt, nLons-1, iLat, iAlt) = lon1d;
-      magPhi_scgc.subcube(0, iLat, iAlt, nLons-1, iLat, iAlt) = lon1d;
+      
+      // AD: does below make sense?
+      // magPhi_scgc.subcube(0, iLat, iAlt, nLons-1, iLat, iAlt) = lon1d;
 
     }
   }
@@ -47,6 +50,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   // - Make a 1d vector
   // - copy it into the 3d cube
   fvec lat1d(nLats);
+  
   //cout << "!!!!!!!!!!! HA1a "<<endl;
 
 
@@ -61,22 +65,39 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   float dlshell = (lshell(nLats-1)-lshell(0))/nLats;
   
   for (iLat=1; iLat < nLats; iLat++){
+
     lshell[iLat] = lshell[iLat-1]+dlshell;
+    
     //cout << "Lshell = " << lshell(iLat)<<endl;
-    //lat1d(iLat) = grid_input.lat_min + (iLat-nGCs+0.5) * dlat;
+    
+    //AD<
+    lat1d(iLat) = grid_input.lat_min + (iLat-nGCs+0.5) * dlat;
+    //>AD
   }
   
+  // AD<
+  for (iLon = 0; iLon < nLons; iLon++) {
+    for (iAlt = 0; iAlt < nAlts; iAlt++)
+      this->magLat_scgc.subcube(iLon, 0, iAlt, iLon, nLats - 1, iAlt) = lat1d;
+  }
+  //>AD
+
+
   for (iLon=0; iLon < nLons; iLon++) {
     for (iAlt=0; iAlt < nAlts; iAlt++) {
+    
       //magP_scgc.subcube(iLon, 0, iAlt, iLon, nLats-1, iAlt) = lshell;
+    
       for (iLat=0; iLat<nLats; iLat++){
-	//cout << "L fill " << lshell[iLat] << endl;
-	magP_scgc(iLon, iLat, iAlt) = lshell[iLat];
-	//if (iLon==12 and iLat==10 and iAlt==1){
-	  //cout << iLon<<" "<< iLat <<" "<< iAlt <<" P fill " << magP_scgc(iLon,iLat,iAlt) << endl;
-	//}
-	//cout << iLon<<" "<< iLat <<" "<< iAlt <<" P fill " << magP_scgc(12,10,1) << endl;
-	//cout << "magP_scgc[iLon, iLat, iAlt] = lshell[iLat];"<<" "<<magP_scgc[iLon, iLat, iAlt] <<" " <<lshell[iLat] << endl;
+	      //cout << "L fill " << lshell[iLat] << endl;
+	      
+        magP_scgc(iLon, iLat, iAlt) = lshell[iLat];
+
+	      //if (iLon==12 and iLat==10 and iAlt==1){
+	      //cout << iLon<<" "<< iLat <<" "<< iAlt <<" P fill " << magP_scgc(iLon,iLat,iAlt) << endl;
+	      //}
+	      //cout << iLon<<" "<< iLat <<" "<< iAlt <<" P fill " << magP_scgc(12,10,1) << endl;
+	      //cout << "magP_scgc[iLon, iLat, iAlt] = lshell[iLat];"<<" "<<magP_scgc[iLon, iLat, iAlt] <<" " <<lshell[iLat] << endl;
       }
     }
   }
@@ -101,12 +122,14 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
 
   for (iLon=0; iLon < nLons; iLon++) {
     for (iLat=0; iLat < nLats; iLat++) {
+
       Lshell  = magP_scgc(iLon,iLat,1);
       Lon     = magPhi_scgc(iLon,iLat,1);
       
       // get the q value for N and S hemisphere
       cout << iLon << " " << iLat << " L= "<<Lshell<<" "<< magP_scgc(iLon,iLat,1)<<endl;
       auto Qvals = lshell_to_qn_qs(planet, Lshell, Lon, AltMin, report);
+
       qN = Qvals.first;
       qS = Qvals.second;
 
@@ -130,39 +153,55 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   
   for (iX=0; iX<nX; iX++){
     for (iY=0; iY<nY; iY++){
-	      for (iZ=0; iZ<nZ; iZ++){
+      for (iZ=0; iZ<nZ; iZ++){
 	    
 	    
-	    // For given q and p we can now find cooresponding r and theta in
-	    // dipole coord. Starty by numerically solving for r (normalized) 
-	    // using equation 4 of Huba et al 2000 given by q^2r^4+1/p r -1 = 0
-	    auto rtheta =
-	      p_q_to_r_theta(magP_scgc(iX,iY,iZ), magQ_scgc(iX,iY,iZ));
-	    
-	    float r = rtheta.first;
-	    float theta = rtheta.second;
-  
-	    //cout << "i, q " << i << "  " << q[i] << endl;
-	    //cout << "i, x " << i << "  " << x[i] << endl;
-	    //cout << "i, r, theta " << i << "  " << r[i]<<" "<<theta[i] << endl << endl;
-	    
-	    cout << iX <<" "<< iY << " " << iZ << " " << magPhi_scgc(iX,iY,iZ) << endl;
-	    Llr[0] = magPhi_scgc(iX,iY,iZ);
-	    Llr[1] = 0.5*cPI-theta;
-	    Llr[2] = r;
+        // For given q and p we can now find cooresponding r and theta in
+        // dipole coord. Starty by numerically solving for r (normalized) 
+        // using equation 4 of Huba et al 2000 given by q^2r^4+1/p r -1 = 0
+        auto rtheta =
+          p_q_to_r_theta(magP_scgc(iX,iY,iZ), magQ_scgc(iX,iY,iZ));
+        
+        float r = rtheta.first;
+        float theta = rtheta.second;
+     
+        //cout << "i, q " << i << "  " << q[i] << endl;
+        //cout << "i, x " << i << "  " << x[i] << endl;
+        //cout << "i, r, theta " << i << "  " << r[i]<<" "<<theta[i] << endl << endl;
+        
+        cout << iX <<" "<< iY << " " << iZ << " " << magPhi_scgc(iX,iY,iZ) << endl;
+        
+        // Llr: lat, lon, rad
 
-	    //if (iZ==nZ/2){
-	    //  cout << magP_scgc(iX,iY,iZ) <<endl;
-	    //  cout << Llr[0]<<" "<<Llr[1]<<" "<<Llr[2] << endl;
-	    //}
-	    
-	    transform_llr_to_xyz(Llr, Xyz);
-	    magX_scgc(iX,iY,iZ)=Xyz[0];
-	    magY_scgc(iX,iY,iZ)=Xyz[1];
-	    magZ_scgc(iX,iY,iZ)=Xyz[2];
-	  }
-      }
+        Llr[0] = magPhi_scgc(iX,iY,iZ);
+        Llr[1] = 0.5*cPI - theta;
+        Llr[2] = r;
+
+        //if (iZ==nZ/2){
+        //  cout << magP_scgc(iX,iY,iZ) <<endl;
+        //  cout << Llr[0]<<" "<<Llr[1]<<" "<<Llr[2] << endl;
+        //}
+        
+        transform_llr_to_xyz(Llr, Xyz);
+        magX_scgc(iX,iY,iZ)=Xyz[0];
+        magY_scgc(iX,iY,iZ)=Xyz[1];
+        magZ_scgc(iX,iY,iZ)=Xyz[2];
+
+        // AD<
+        this->geoLon_scgc(iX,iY,iZ) = magPhi_scgc(iX,iY,iZ);
+        this->geoLat_scgc(iX,iY,iZ) = theta;
+        this->geoAlt_scgc(iX,iY,iZ) = r;
+
+        // - grid_input.alt_min ?
+
+        // >AD
+        
+	    }
+    }
   }
+
+
+
 
 
   // save 3D mag grid for examination
@@ -180,10 +219,10 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
     for (iY=0; iY<nY; iY++){
       for (iZ=0; iZ<nZ; iZ++){
 	
-	gridfile << std::fixed << magX_scgc(iX,iY,iZ)
-		 <<" "<< std::fixed << magY_scgc(iX,iY,iZ)
-		 <<" "<< std::fixed << magZ_scgc(iX,iY,iZ)
-		 << endl;
+        gridfile << std::fixed << magX_scgc(iX,iY,iZ)
+          <<" "<< std::fixed << magY_scgc(iX,iY,iZ)
+          <<" "<< std::fixed << magZ_scgc(iX,iY,iZ)
+          << endl;
       }
     }
   }

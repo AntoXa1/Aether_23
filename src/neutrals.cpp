@@ -52,6 +52,8 @@ Neutrals::species_chars Neutrals::create_species(Grid grid) {
 //  Initialize neutrals
 // -----------------------------------------------------------------------------
 
+
+
 Neutrals::Neutrals(Grid grid,
                    Planets planet,
                    Times time,
