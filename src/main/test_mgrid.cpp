@@ -14,7 +14,7 @@
 int main() {
 
   int iErr = 0;
-
+  bool DidWork = true;
   Times time;
   Report report;
 
@@ -23,14 +23,29 @@ int main() {
   static int iFunction = -1;
   report.enter(function, iFunction);
 
+
+cout<<"entering : "<< function <<endl;
+
   // Create inputs (reading the input file):
   Inputs input(time, report);
 
   // Initialize the EUV system:
   // Euv euv(input, report);
+// cout<<"passed .. \n";
+  
+// AD:
+  Quadtree quadtree(input, report);
+
+
+  DidWork = init_parallel(input, quadtree, report);
+
+
+
 
   // Initialize the planet:
   Planets planet(input, report);
+
+
 
   // Initialize the indices (and read the files):
   Indices indices(input);
@@ -41,10 +56,10 @@ int main() {
        input.get_nLatsGeo(),
        input.get_nAltsGeo(), nGeoGhosts);
 
+
+
 //   gGrid.init_geo_grid(planet, input, report);
 
-// AD:
-  Quadtree quadtree(input, report);
     
   if (!quadtree.is_ok())
       throw std::string("quadtree initialization failed!");
@@ -59,7 +74,12 @@ int main() {
        input.get_nLatsMag(),
        input.get_nAltsMag(), nMagGhosts);
 
+cout<<"----------" << "init mgrid is ok"<<endl;
+
   mGrid.init_mag_grid(planet, input, report);
+
+cout<<"----------" << "init mGrid.mag_grid is ok"<<endl;
+
 
   report.exit(function);
   report.times();

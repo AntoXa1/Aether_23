@@ -37,6 +37,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
     for (iAlt=0; iAlt < nAlts; iAlt++) {
       magLon_scgc.subcube(0, iLat, iAlt, nLons-1, iLat, iAlt) = lon1d;
       magPhi_scgc.subcube(0, iLat, iAlt, nLons-1, iLat, iAlt) = lon1d;
+
     }
   }
   
@@ -128,8 +129,8 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   int iX, iY, iZ;
   
   for (iX=0; iX<nX; iX++){
-      for (iY=0; iY<nY; iY++){
-	  for (iZ=0; iZ<nZ; iZ++){
+    for (iY=0; iY<nY; iY++){
+	      for (iZ=0; iZ<nZ; iZ++){
 	    
 	    
 	    // For given q and p we can now find cooresponding r and theta in
