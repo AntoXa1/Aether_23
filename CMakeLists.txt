@@ -46,7 +46,8 @@ endif()
 # add_executable(tests ${TESTS_DIR}/electrodynamics_unit_tests.cpp)
 
 # Set compiler and cmake options
-target_compile_options(aether PUBLIC -ffast-math -O3)
+# target_compile_options(aether PUBLIC -ffast-math -O3)
+target_compile_options(aether PUBLIC -ffast-math)
 
 set(SHARE_INCLUDE ${PROJECT_SOURCE_DIR}/share/include)
 set(CMAKE_CXX_STANDARD 11)

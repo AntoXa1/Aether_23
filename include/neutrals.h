@@ -235,7 +235,9 @@ class Neutrals {
 
   void fill_with_hydrostatic(int64_t iSpecies,
 			     Grid grid, Report report);
-
+  
+  void fill_with_hydrostatic(int64_t isMagGrid, int64_t iSpecies, 
+          Grid grid, Report report);
   
   /**********************************************************************
      \brief Calculate the bulk mass density from individual species densities

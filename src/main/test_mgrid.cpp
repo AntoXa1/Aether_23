@@ -31,18 +31,14 @@ cout<<"entering : "<< function <<endl;
   // Euv euv(input, report);
 // cout<<"passed .. \n";
   
-// AD:
+
   Quadtree quadtree(input, report);
 
 
   DidWork = init_parallel(input, quadtree, report);
 
-
-
-
   // Initialize the planet:
   Planets planet(input, report);
-
 
 
   // Initialize the indices (and read the files):
@@ -72,19 +68,47 @@ cout<<"entering : "<< function <<endl;
        input.get_nLatsMag(),
        input.get_nAltsMag(), nMagGhosts);
 
-cout<<"----------" << "init mgrid is ok"<<endl;
 
   mGrid.init_mag_grid(planet, input, report);
   
   // iterate p,q; convert to r,theta,phi; 
   // p,q, is uniform, while rThPhi is non-uniform
-  // feed and initialize d_neutrals with rThPhi
+  // feed and initialize m_neutrals with rThPhi
+
 
 
   // Initialize Neutrals on dipole grid:
-  Neutrals d_neutrals(mGrid, planet, time, indices, input, report);
+  Neutrals m_neutrals(mGrid, planet, time, indices, input, report);
 
+exit(10);
+// Initialize Ions on m-geographic grid:
+    Ions m_ions(mGrid, planet, input, report);
 
+// Once EUV, neutrals, and ions have been defined, pair cross sections
+
+// Initialize the EUV system:
+    
+Euv euv(input, report);
+    
+if (!euv.is_ok())
+      throw std::string("EUV initialization failed!");
+    
+euv.pair_euv(m_neutrals, m_ions, report);
+
+    // Initialize Chemical scheme (including reading file):
+Chemistry m_chemistry(m_neutrals, m_ions, input, report);
+
+// Read in the collision frequencies and other diffusion coefficients:
+    read_collision_file(m_neutrals, m_ions, input, report);
+
+    // Initialize ion temperatures from neutral temperature
+    m_ions.init_ion_temperature(m_neutrals, mGrid, report);
+
+double dt_couple = time.get_end() - time.get_current();
+time.increment_intermediate(dt_couple);
+
+m_chemistry.calc_chemistry(m_neutrals, m_ions, time, mGrid, report); 
+// advance chem
 
 cout<<"----------" << "init mGrid.mag_grid is ok"<<endl;
 

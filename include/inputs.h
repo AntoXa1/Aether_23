@@ -70,8 +70,12 @@ public:
   };
 
   //grid_input_struct get_geo_grid_inputs();
-  //grid_input_struct get_mag_grid_inputs();
+  
+  grid_input_struct get_mgrid_inputs();
+  
   grid_input_struct get_grid_inputs();
+
+  
   
   int get_nLonsGeo();
   int get_nLatsGeo();

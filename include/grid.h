@@ -93,6 +93,7 @@ public:
   int get_IsGeoGrid();
   bool get_HasBField();
   void set_IsGeoGrid(int value);
+  void set_IsMagGrid(int value);
 
   int64_t get_nPointsInGrid();
 
@@ -213,6 +214,9 @@ public:
 
 
   int IsGeoGrid;
+  int IsMagGrid=0; //this switch is needed to tell between geogrid (irregular) when filling the maggrid 
+                 // and the geogrid for neutrals
+
   bool HasBField;
 
   int64_t nX, nLons;

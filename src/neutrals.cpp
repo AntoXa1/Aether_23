@@ -219,6 +219,33 @@ void Neutrals::fill_with_hydrostatic(int64_t iSpecies,
   calc_mass_density(report);
 }
 
+// the geographic grid which corresponds to the mgrid is irregular;
+//  cannot use slices:
+
+void Neutrals::fill_with_hydrostatic(int64_t isMagGrid, int64_t iSpecies, Grid grid, Report report) {
+// if (isMagGrid)==0{
+//   cout<<"quite bad initialization of the mgrid "<<endl;
+//   error(10);
+// } 
+// else{
+//     int64_t nAlts = grid.get_nAlts();
+//     int64_t nLats = grid.get_nLats();
+//     int64_t nLons = grid.get_nLons();
+    
+//    for (iLon = 0; iLon < nLons; iLon++) { 
+    
+//     for (int iLat = 1; iLat < nLats; iLat++) {
+
+//     for (int iAlt = 1; iAlt < nAlts; iAlt++) {
+      
+//       density_scgc
+
+// }
+
+}
+
+
+
 //----------------------------------------------------------------------
 // return the index of the requested species
 // This will return -1 if the species is not found or name is empty

@@ -280,6 +280,43 @@ Inputs::grid_input_struct Inputs::get_grid_inputs() {
   return geo_grid_input;
 }
 
+
+Inputs::grid_input_struct Inputs::get_mgrid_inputs() {
+  // First Get Values:
+  // Here is where you would add the ability to overrite the defaults for the mag grid
+
+
+
+  
+  // geo_grid_input.alt_file = settings["GeoGrid"]["AltFile"];
+  // geo_grid_input.IsUniformAlt = settings["GeoGrid"]["IsUniformAlt"];
+  // geo_grid_input.alt_min = settings["GeoGrid"]["MinAlt"];
+  // geo_grid_input.dalt = settings["GeoGrid"]["dAlt"];
+
+  
+  // mag_grid_input.lat_min = settings["GeoGrid"]["MinLat"];
+  // mag_grid_input.lat_max = settings["GeoGrid"]["MaxLat"];
+
+
+  // geo_grid_input.lon_min = settings["GeoGrid"]["MinLon"];
+  // geo_grid_input.lon_max = settings["GeoGrid"]["MaxLon"];
+
+  // Second Change Units
+  // geo_grid_input.alt_min = geo_grid_input.alt_min * cKMtoM;
+  // geo_grid_input.lat_min = geo_grid_input.lat_min * cDtoR;
+  // geo_grid_input.lat_max = geo_grid_input.lat_max * cDtoR;
+  // geo_grid_input.lon_min = geo_grid_input.lon_min * cDtoR;
+  // geo_grid_input.lon_max = geo_grid_input.lon_max * cDtoR;
+
+  // If the grid is uniform, dalt is in km, else it is in fractions of
+  // scale height:
+  // if (geo_grid_input.IsUniformAlt)
+  //   geo_grid_input.dalt = geo_grid_input.dalt * cKMtoM;
+
+  return mag_grid_input;
+}
+
+
 // -----------------------------------------------------------------------
 // Return whether user is student
 // -----------------------------------------------------------------------

@@ -287,6 +287,10 @@ void Grid::set_IsGeoGrid(int value) {
   IsGeoGrid = value;
 }
 
+void Grid::set_IsMagGrid(int value) {
+  IsMagGrid = value;
+}
+
 // --------------------------------------------------------------------------
 // Get total number of grid points
 // --------------------------------------------------------------------------

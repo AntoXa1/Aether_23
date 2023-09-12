@@ -20,7 +20,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   
   // This is just an example:
   
-  Inputs::grid_input_struct grid_input = input.get_grid_inputs();
+  Inputs::grid_input_struct grid_input = input.get_mgrid_inputs();
   
   int64_t iLon, iLat, iAlt;
   
@@ -70,17 +70,17 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
     
     //cout << "Lshell = " << lshell(iLat)<<endl;
     
-    //AD<
+    //<
     lat1d(iLat) = grid_input.lat_min + (iLat-nGCs+0.5) * dlat;
-    //>AD
+    //>
   }
   
-  // AD<
+  //<
   for (iLon = 0; iLon < nLons; iLon++) {
     for (iAlt = 0; iAlt < nAlts; iAlt++)
       this->magLat_scgc.subcube(iLon, 0, iAlt, iLon, nLats - 1, iAlt) = lat1d;
   }
-  //>AD
+  //>
 
 
   for (iLon=0; iLon < nLons; iLon++) {
@@ -456,12 +456,12 @@ std::pair<float,float> Grid::lshell_to_qn_qs(Planets planet, float Lshell, float
     rDipoleMid    = Lshell * pow(sin(ThetaMid),2.0);
     if (iQ ==0){
       qN = pow(rDipoleMid,-2.0)*cos(ThetaMid);
-      cout << "!!! For L = " << Lshell << endl;
-      cout << "!!! qN = " << qN << endl;
-      cout << "!!! ThetaMid = " << ThetaMid*cRtoD << endl;
+      // cout << "!!! For L = " << Lshell << endl;
+      // cout << "!!! qN = " << qN << endl;
+      // cout << "!!! ThetaMid = " << ThetaMid*cRtoD << endl;
     }else{
       qS = pow(rDipoleMid,-2.0)*cos(ThetaMid);
-      cout << "!!! qS = " << qS << endl;
+      // cout << "!!! qS = " << qS << endl;
     }
   }
 
@@ -615,17 +615,34 @@ std::pair<float,float> Grid::p_q_to_r_theta(float p, float q) {
 
   // initial guess for r
   r = 1.0;
-  
+
   Func= pow(q,2.0) * pow(r,4.0) + 1.0/p*r-1;
   dFunc= 4.0*pow(q,2.0) * pow(r,3.0) + 1.0/p;
+  
+  // cout<< "p,q="<<p<<" "<<q << endl;
+  // cout<< Func<<" "<<dFunc;
+  // cout<<endl;
+
+  int itr=0;
+  int maxItr=100;
 
   // apply NR iterations to get 
-  while( abs(Func/dFunc) > Tolerance ) { 
-    Func= pow(q,2.0) * pow(r,4.0) + 1.0/p*r-1;
-    dFunc= 4.0*pow(q,2.0) * pow(r,3.0) + 1.0/p;
-    
-    // in NR method r(i+1)=r(i)-f/f' for each iteration
-    r=r-Func/dFunc;
+  while( abs(Func/dFunc) > Tolerance) { 
+    try {
+      Func= pow(q,2.0) * pow(r,4.0) + 1.0/p*r-1;
+      dFunc= 4.0*pow(q,2.0) * pow(r,3.0) + 1.0/p;
+      
+      // in NR method r(i+1)=r(i)-f/f' for each iteration
+      
+      r = r - Func/dFunc;
+
+      if (++itr > maxItr){ throw(itr);}
+    }
+    catch (int itr){
+        cout<<"WARN: exceeded max #iterations.. exiting ";
+        exit(10);
+    }
+    // cout << r << " " << Func << " "<< dFunc << endl;
   }
   
   // now that r is determined we can solve for theta
