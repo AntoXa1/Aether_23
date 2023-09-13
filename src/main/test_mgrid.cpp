@@ -70,6 +70,9 @@ cout<<"entering : "<< function <<endl;
 
 
   mGrid.init_mag_grid(planet, input, report);
+
+  mGrid.fill_grid(planet, report);
+
   
   // iterate p,q; convert to r,theta,phi; 
   // p,q, is uniform, while rThPhi is non-uniform
@@ -80,7 +83,7 @@ cout<<"entering : "<< function <<endl;
   // Initialize Neutrals on dipole grid:
   Neutrals m_neutrals(mGrid, planet, time, indices, input, report);
 
-exit(10);
+  //exit(10);
 // Initialize Ions on m-geographic grid:
     Ions m_ions(mGrid, planet, input, report);
 
