@@ -169,7 +169,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
         //cout << "i, x " << i << "  " << x[i] << endl;
         //cout << "i, r, theta " << i << "  " << r[i]<<" "<<theta[i] << endl << endl;
         
-        cout << iX <<" "<< iY << " " << iZ << " " << magPhi_scgc(iX,iY,iZ) << endl;
+        cout << "iX+ magPhi: " << iX <<" "<< iY << " " << iZ << " " << magPhi_scgc(iX,iY,iZ) << endl;
         
         // Llr: lat, lon, rad
 
@@ -254,7 +254,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   
   // Calculate the radius, etc:
   
-  //  fill_grid_radius(planet, report);
+  fill_grid_radius(planet, report);
   
   //  fill_grid_bfield(planet, input, report);
   
