@@ -86,7 +86,7 @@ cout<<"entering : "<< function <<endl;
   //exit(10);
 // Initialize Ions on m-geographic grid:
     Ions m_ions(mGrid, planet, input, report);
-
+    
 // Once EUV, neutrals, and ions have been defined, pair cross sections
 
 // Initialize the EUV system:
@@ -110,9 +110,38 @@ Chemistry m_chemistry(m_neutrals, m_ions, input, report);
 double dt_couple = time.get_end() - time.get_current();
 time.increment_intermediate(dt_couple);
 
+// AJR - added this stuff for one time-step:
+  mGrid.calc_sza(planet, time, report);
+  m_neutrals.calc_mass_density(report);
+  m_neutrals.calc_specific_heat(report);
+  time.calc_dt();
+
+
+  iErr = calc_euv(planet,
+                  mGrid,
+                  time,
+                  euv,
+                  m_neutrals,
+                  m_ions,
+                  indices,
+                  input,
+                  report);
+  
+
+ 
+
 m_chemistry.calc_chemistry(m_neutrals, m_ions, time, mGrid, report); 
 // advance chem
 
+iErr = output(m_neutrals,
+	      m_ions,
+	      mGrid,
+	      time,
+	      planet,
+	      input,
+	      report);
+
+ 
 cout<<"----------" << "init mGrid.mag_grid is ok"<<endl;
 
 
