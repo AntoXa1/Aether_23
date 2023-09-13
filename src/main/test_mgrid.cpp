@@ -75,8 +75,6 @@ cout<<"entering : "<< function <<endl;
   // p,q, is uniform, while rThPhi is non-uniform
   // feed and initialize m_neutrals with rThPhi
 
-
-
   // Initialize Neutrals on dipole grid:
   Neutrals m_neutrals(mGrid, planet, time, indices, input, report);
 

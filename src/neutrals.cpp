@@ -180,6 +180,7 @@ void Neutrals::fill_with_hydrostatic(Grid grid, Report report) {
 
   int64_t nAlts = grid.get_nAlts();
 
+if (grid.get_IsMagGrid()==0){
   for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
 
     // Integrate with hydrostatic equilibrium up:
@@ -191,11 +192,12 @@ void Neutrals::fill_with_hydrostatic(Grid grid, Report report) {
         species[iSpecies].density_scgc.slice(iAlt - 1) %
         exp(-grid.dalt_lower_scgc.slice(iAlt) /
             species[iSpecies].scale_height_scgc.slice(iAlt));
-    }
+    } 
   }
-
+}
   calc_mass_density(report);
 }
+
 
 //----------------------------------------------------------------------
 // Fill With Hydrostatic Solution (only one constituent)
@@ -222,26 +224,27 @@ void Neutrals::fill_with_hydrostatic(int64_t iSpecies,
 // the geographic grid which corresponds to the mgrid is irregular;
 //  cannot use slices:
 
-void Neutrals::fill_with_hydrostatic(int64_t isMagGrid, int64_t iSpecies, Grid grid, Report report) {
-// if (isMagGrid)==0{
-//   cout<<"quite bad initialization of the mgrid "<<endl;
-//   error(10);
-// } 
-// else{
-//     int64_t nAlts = grid.get_nAlts();
-//     int64_t nLats = grid.get_nLats();
-//     int64_t nLons = grid.get_nLons();
-    
-//    for (iLon = 0; iLon < nLons; iLon++) { 
-    
-//     for (int iLat = 1; iLat < nLats; iLat++) {
+void Neutrals::fill_forMagGrid_with_hydrostatic(int64_t iSpecies, Grid grid, Report report) {
 
-//     for (int iAlt = 1; iAlt < nAlts; iAlt++) {
+    int64_t nAlts = grid.get_nAlts();
+    int64_t nLats = grid.get_nLats();
+    int64_t nLons = grid.get_nLons();
+
+    for (int iAlt = 1; iAlt < nAlts; iAlt++) {    
+      for (int iLat = 1; iLat < nLats; iLat++) {
+        for (int iLon = 0; iLon < nLons; iLon++) { 
+    
+        species[iSpecies].density_scgc(iLon, iLat, iAlt)=
+        species[iSpecies].density_scgc(iLon, iLat, iAlt-1) *
+        exp(-grid.dalt_lower_scgc(iLon, iLat, iAlt) /
+        species[iSpecies].scale_height_scgc(iLon, iLat, iAlt));
+          
+          
+        }
+      }
+    }
       
-//       density_scgc
-
-// }
-
+        calc_mass_density(report); 
 }
 
 

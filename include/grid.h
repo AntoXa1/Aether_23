@@ -91,6 +91,10 @@ public:
   Grid(int nX_in, int nY_in, int nZ_in, int nGCs_in);
 
   int get_IsGeoGrid();
+  // >>
+  int get_IsMagGrid();
+  // <<
+
   bool get_HasBField();
   void set_IsGeoGrid(int value);
   void set_IsMagGrid(int value);
@@ -214,9 +218,8 @@ public:
 
 
   int IsGeoGrid;
-  int IsMagGrid=0; //this switch is needed to tell between geogrid (irregular) when filling the maggrid 
-                 // and the geogrid for neutrals
-
+  int IsMagGrid=0; //maggrid: when filling the irregular geogrid
+                 
   bool HasBField;
 
   int64_t nX, nLons;

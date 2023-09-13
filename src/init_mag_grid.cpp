@@ -18,8 +18,10 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   static int iFunction = -1;
   report.enter(function, iFunction);
   
-  // This is just an example:
-  
+// turn the switch on! 
+  this->set_IsMagGrid(1);
+
+  // This is just an example:  
   Inputs::grid_input_struct grid_input = input.get_mgrid_inputs();
   
   int64_t iLon, iLat, iAlt;

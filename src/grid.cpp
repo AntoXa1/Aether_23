@@ -267,6 +267,13 @@ void Grid::report_grid_boundaries() {
 // Get whether the grid is a geographic grid (or magnetic - return 0)
 // --------------------------------------------------------------------------
 
+
+int Grid::get_IsMagGrid() {
+  return IsMagGrid;
+}
+
+
+
 int Grid::get_IsGeoGrid() {
   return IsGeoGrid;
 }
