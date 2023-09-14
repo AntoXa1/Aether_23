@@ -179,8 +179,6 @@ int Neutrals::read_planet_file(Planets planet, Inputs input, Report report) {
 void Neutrals::fill_with_hydrostatic(Grid grid, Report report) {
 
   int64_t nAlts = grid.get_nAlts();
-
-if (grid.get_IsMagGrid()==0){
   for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
 
     // Integrate with hydrostatic equilibrium up:
@@ -193,7 +191,7 @@ if (grid.get_IsMagGrid()==0){
         exp(-grid.dalt_lower_scgc.slice(iAlt) /
             species[iSpecies].scale_height_scgc.slice(iAlt));
     } 
-  }
+  
 }
   calc_mass_density(report);
 }
@@ -206,6 +204,7 @@ if (grid.get_IsMagGrid()==0){
 void Neutrals::fill_with_hydrostatic(int64_t iSpecies,
                                      Grid grid, Report report) {
 
+if (grid.get_IsMagGrid()==0){
   int64_t nAlts = grid.get_nAlts();
 
   species[iSpecies].scale_height_scgc =
@@ -219,6 +218,10 @@ void Neutrals::fill_with_hydrostatic(int64_t iSpecies,
           species[iSpecies].scale_height_scgc.slice(iAlt));
   }
   calc_mass_density(report);
+} else {
+  // if this is mgrid call special treatment
+  fill_forMagGrid_with_hydrostatic(iSpecies, grid, report);
+}
 }
 
 // the geographic grid which corresponds to the mgrid is irregular;

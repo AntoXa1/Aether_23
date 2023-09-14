@@ -78,16 +78,20 @@ cout<<"entering : "<< function <<endl;
   // Initialize Neutrals on dipole grid:
   Neutrals m_neutrals(mGrid, planet, time, indices, input, report);
 
-exit(10);
+  cout<<" Initialize Neutrals on dipole grid: done .."<<endl;
+
 // Initialize Ions on m-geographic grid:
     Ions m_ions(mGrid, planet, input, report);
+  cout<<"Initialize Ions on m-geographic grid: done .."<<endl;
 
 // Once EUV, neutrals, and ions have been defined, pair cross sections
 
 // Initialize the EUV system:
     
 Euv euv(input, report);
-    
+cout<<"Initialize the EUV system: done .."<<endl;
+
+// exit(10);    
 if (!euv.is_ok())
       throw std::string("EUV initialization failed!");
     
@@ -110,7 +114,7 @@ m_chemistry.calc_chemistry(m_neutrals, m_ions, time, mGrid, report);
 
 cout<<"----------" << "init mGrid.mag_grid is ok"<<endl;
 
-
+// exit(10);
   report.exit(function);
   report.times();
 
