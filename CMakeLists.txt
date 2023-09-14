@@ -31,7 +31,8 @@ set(RUN_DIR ${PROJECT_SOURCE_DIR}/run)
 #   add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/main.cpp)
 # endif()
 
-
+# to use this, run:
+# cmake -DTEST_MGRID=Y ..
 if(TEST_MGRID)
   add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/test_mgrid.cpp)
   # add_executable(test_mgrid ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/test_mgrid.cpp)

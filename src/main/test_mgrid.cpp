@@ -70,6 +70,9 @@ cout<<"entering : "<< function <<endl;
 
 
   mGrid.init_mag_grid(planet, input, report);
+
+  mGrid.fill_grid(planet, report);
+
   
   // iterate p,q; convert to r,theta,phi; 
   // p,q, is uniform, while rThPhi is non-uniform
@@ -109,9 +112,38 @@ Chemistry m_chemistry(m_neutrals, m_ions, input, report);
 double dt_couple = time.get_end() - time.get_current();
 time.increment_intermediate(dt_couple);
 
+// AJR - added this stuff for one time-step:
+  mGrid.calc_sza(planet, time, report);
+  m_neutrals.calc_mass_density(report);
+  m_neutrals.calc_specific_heat(report);
+  time.calc_dt();
+
+
+  iErr = calc_euv(planet,
+                  mGrid,
+                  time,
+                  euv,
+                  m_neutrals,
+                  m_ions,
+                  indices,
+                  input,
+                  report);
+  
+
+ 
+
 m_chemistry.calc_chemistry(m_neutrals, m_ions, time, mGrid, report); 
 // advance chem
 
+iErr = output(m_neutrals,
+	      m_ions,
+	      mGrid,
+	      time,
+	      planet,
+	      input,
+	      report);
+
+ 
 cout<<"----------" << "init mGrid.mag_grid is ok"<<endl;
 
 // exit(10);
