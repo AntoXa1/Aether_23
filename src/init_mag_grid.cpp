@@ -46,6 +46,8 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
     }
   }
   
+  magPhi_scgc = magLon_scgc;
+
   cout << "from"<< function<< "nLats=  "<< nLats<<"\n"<<endl;
   
   // Latitudes:
@@ -190,6 +192,9 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
         magZ_scgc(iX,iY,iZ)=Xyz[2];
 
         // AD<
+        if (iX == 5 & iY == 5)
+          cout << "lon, lat, alt: " << magPhi_scgc(iX,iY,iZ) << " "
+          << theta << " " << r << "\n";
         this->geoLon_scgc(iX,iY,iZ) = magPhi_scgc(iX,iY,iZ);
         this->geoLat_scgc(iX,iY,iZ) = theta;
         this->geoAlt_scgc(iX,iY,iZ) = r;
