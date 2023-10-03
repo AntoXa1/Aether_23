@@ -173,7 +173,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
         //cout << "i, x " << i << "  " << x[i] << endl;
         //cout << "i, r, theta " << i << "  " << r[i]<<" "<<theta[i] << endl << endl;
         
-        cout << "iX+ magPhi: " << iX <<" "<< iY << " " << iZ << " " << magPhi_scgc(iX,iY,iZ) << endl;
+        //cout << "iX+ magPhi: " << iX <<" "<< iY << " " << iZ << " " << magPhi_scgc(iX,iY,iZ) << endl;
         
         // Llr: lat, lon, rad
 
@@ -194,7 +194,9 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
         // AD<
         if (iX == 5 & iY == 5)
           cout << "lon, lat, alt: " << magPhi_scgc(iX,iY,iZ) << " "
-          << theta << " " << r << "\n";
+          << theta << " " << r 
+          << " " << magP_scgc(iX,iY,iZ) 
+          << " " << magQ_scgc(iX,iY,iZ) << "\n";
         this->geoLon_scgc(iX,iY,iZ) = magPhi_scgc(iX,iY,iZ);
         this->geoLat_scgc(iX,iY,iZ) = theta;
         this->geoAlt_scgc(iX,iY,iZ) = r;
@@ -589,7 +591,10 @@ void Grid::fill_dipole_q_line(float qN, float qS, float Gamma, int nZ, float Lsh
      transform_llr_to_xyz(Llr, Xyz);
 
      if (DoTestLine==1){
-       gridfile << Xyz[0] <<" "<< Xyz[1] <<" "<< Xyz[2] << endl;
+       gridfile << Xyz[0] <<" " 
+                << Xyz[1] <<" "
+                << Xyz[2] <<" "
+                << Lshell <<  endl;
 
      }
   }
@@ -621,7 +626,7 @@ std::pair<float,float> Grid::p_q_to_r_theta(float p, float q) {
   float Tolerance = 0.00001;
 
   // initial guess for r
-  r = 1.0;
+  r = 100.0;
 
   Func= pow(q,2.0) * pow(r,4.0) + 1.0/p*r-1;
   dFunc= 4.0*pow(q,2.0) * pow(r,3.0) + 1.0/p;
@@ -664,3 +669,98 @@ std::pair<float,float> Grid::p_q_to_r_theta(float p, float q) {
   
   return {r,theta};
 }
+
+// ----------------------------------------------------------------------
+// Initialize the geographic grid.  At the moment, this is a simple
+// Lon/Lat/Alt grid.  The grid structure is general enough that each
+// of the lon, lat, and alt can be a function of the other variables.
+// ----------------------------------------------------------------------
+
+void Grid::init_dipole_grid(Quadtree quadtree, Planets planet, Inputs input, Report &report) {
+  
+  std::string function = "Grid::init_dipole_grid";
+  static int iFunction = -1;
+  report.enter(function, iFunction);
+  
+// turn the switch on! 
+  IsMagGrid = true;
+
+  int64_t iLon, iLat, iAlt;
+
+  // This is just an example:  
+  report.print(3, "Getting mgrid_inputs inputs in dipole grid");
+
+  Inputs::grid_input_struct grid_input = input.get_mgrid_inputs();
+
+  report.print(3, "Setting inputs in dipole grid");
+  precision_t min_apex = grid_input.min_apex;
+  precision_t min_alt = grid_input.alt_min;
+  precision_t planetRadius = planet.get_radius(0.0);
+  precision_t min_lshell = (min_apex + planetRadius)/planetRadius;
+  precision_t min_r = (min_alt + planetRadius)/planetRadius;
+  precision_t min_lat = get_lat_from_r_and_lshell(min_r, min_lshell);
+  precision_t stretch = (cPI - min_lat) / cPI;
+  report.print(3, "Done setting inputs in dipole grid");
+
+  // Get some coordinates and sizes in normalized coordinates:
+  arma_vec lower_left_norm = quadtree.get_vect("LL");
+  arma_vec size_right_norm = quadtree.get_vect("SR");
+  arma_vec size_up_norm = quadtree.get_vect("SU");
+
+  precision_t dlon = size_right_norm(0) * cPI / (nLons - 2 * nGCs);
+  precision_t lon0 = lower_left_norm(0) * cPI;
+  arma_vec lon1d(nLons);
+
+  // Longitudes:
+  // - Make a 1d vector
+  // - copy it into the 3d cube
+  for (iLon = 0; iLon < nLons; iLon++)
+    lon1d(iLon) = lon0 + (iLon - nGCs + 0.5) * dlon;
+
+  for (iLat = 0; iLat < nLats; iLat++) {
+    for (iAlt = 0; iAlt < nAlts; iAlt++)
+      magLon_scgc.subcube(0, iLat, iAlt, nLons - 1, iLat, iAlt) = lon1d;
+  }
+
+  geoLon_scgc = magLon_scgc;
+
+  precision_t dlat = size_up_norm(1) * cPI / (nLats - 2 * nGCs) * stretch;
+  precision_t lat0 = lower_left_norm(1) * cPI;
+  if (lat0 >= 0) {
+    lat0 = min_lat + lat0 * stretch;
+  } else {
+    lat0 = -min_lat + lat0 * stretch;
+  }
+  arma_vec lat1d(nLats);
+
+  // Latitudes:
+  // - Make a 1d vector
+  // - copy it into the 3d cube
+  for (iLat = 0; iLat < nLats; iLat++)
+    lat1d(iLat) = lat0 + (iLat - nGCs + 0.5) * dlat;
+
+  for (iLon = 0; iLon < nLons; iLon++) {
+    for (iAlt = 0; iAlt < nAlts; iAlt++)
+      magLat_scgc.subcube(iLon, 0, iAlt, iLon, nLats - 1, iAlt) = lat1d;
+  }
+
+  geoLat_scgc = magLat_scgc;
+
+  arma_vec alt1d(nAlts);
+
+  for (iAlt = 0; iAlt < nAlts; iAlt++)
+    alt1d(iAlt) = min_alt + (iAlt - nGeoGhosts) * grid_input.dalt;
+
+  for (iLon = 0; iLon < nLons; iLon++) {
+    for (iLat = 0; iLat < nLats; iLat++) {
+      magAlt_scgc.tube(iLon, iLat) = alt1d;
+    }
+  }
+
+  geoAlt_scgc = magAlt_scgc;
+
+  report.exit(function);
+  return;
+
+}
+
