@@ -10,6 +10,11 @@ struct bfield_info_type {
   precision_t lat;
 };
 
+precision_t get_lshell(precision_t lat, precision_t rNorm);
+arma_vec get_lat_from_r_and_lshell(arma_vec r, arma_vec lshell);
+precision_t get_lat_from_r_and_lshell(precision_t r, precision_t lshell);
+
+
 arma_vec get_magnetic_pole(int IsNorth,
 		       Planets planet,
 		       Inputs input,
