@@ -284,34 +284,40 @@ Inputs::grid_input_struct Inputs::get_grid_inputs() {
 Inputs::grid_input_struct Inputs::get_mgrid_inputs() {
   // First Get Values:
   // Here is where you would add the ability to overrite the defaults for the mag grid
+  std::cout << "setting maggrid stuff\n";
+  mag_grid_input.alt_file = settings["MagGrid"]["AltFile"];
+  mag_grid_input.IsUniformAlt = settings["MagGrid"]["IsUniformAlt"];
+  mag_grid_input.alt_min = settings["MagGrid"]["MinAlt"];
+  mag_grid_input.min_apex = settings["MagGrid"]["MinApex"];
+  mag_grid_input.dalt = settings["MagGrid"]["dAlt"];
 
+  mag_grid_input.lat_min = settings["MagGrid"]["MinLat"];
+  mag_grid_input.lat_max = settings["MagGrid"]["MaxLat"];
 
-
-  
-  // geo_grid_input.alt_file = settings["GeoGrid"]["AltFile"];
-  // geo_grid_input.IsUniformAlt = settings["GeoGrid"]["IsUniformAlt"];
-  // geo_grid_input.alt_min = settings["GeoGrid"]["MinAlt"];
-  // geo_grid_input.dalt = settings["GeoGrid"]["dAlt"];
-
-  
-  // mag_grid_input.lat_min = settings["GeoGrid"]["MinLat"];
-  // mag_grid_input.lat_max = settings["GeoGrid"]["MaxLat"];
-
-
-  // geo_grid_input.lon_min = settings["GeoGrid"]["MinLon"];
-  // geo_grid_input.lon_max = settings["GeoGrid"]["MaxLon"];
+  mag_grid_input.lon_min = settings["MagGrid"]["MinLon"];
+  mag_grid_input.lon_max = settings["MagGrid"]["MaxLon"];
+  std::cout << "Done Setting inputs in dipole grid\n";
 
   // Second Change Units
-  // geo_grid_input.alt_min = geo_grid_input.alt_min * cKMtoM;
-  // geo_grid_input.lat_min = geo_grid_input.lat_min * cDtoR;
-  // geo_grid_input.lat_max = geo_grid_input.lat_max * cDtoR;
-  // geo_grid_input.lon_min = geo_grid_input.lon_min * cDtoR;
-  // geo_grid_input.lon_max = geo_grid_input.lon_max * cDtoR;
+  mag_grid_input.alt_min = mag_grid_input.alt_min * cKMtoM;
+  mag_grid_input.min_apex = mag_grid_input.min_apex * cKMtoM;
+
+  mag_grid_input.lat_min = mag_grid_input.lat_min * cDtoR;
+  mag_grid_input.lat_max = mag_grid_input.lat_max * cDtoR;
+  mag_grid_input.lon_min = mag_grid_input.lon_min * cDtoR;
+  mag_grid_input.lon_max = mag_grid_input.lon_max * cDtoR;
 
   // If the grid is uniform, dalt is in km, else it is in fractions of
   // scale height:
-  // if (geo_grid_input.IsUniformAlt)
-  //   geo_grid_input.dalt = geo_grid_input.dalt * cKMtoM;
+  if (mag_grid_input.IsUniformAlt)
+     mag_grid_input.dalt = mag_grid_input.dalt * cKMtoM;
+
+  mag_grid_input.isOk = true;
+
+  if (mag_grid_input.min_apex <= mag_grid_input.alt_min) {
+    std::cout << "Need to make sure min apex > min alt!!\n";
+    mag_grid_input.isOk = false;
+  }
 
   return mag_grid_input;
 }
