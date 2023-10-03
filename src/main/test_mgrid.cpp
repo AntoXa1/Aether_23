@@ -69,11 +69,14 @@ cout<<"entering : "<< function <<endl;
        input.get_nAltsMag(), nMagGhosts);
 
 
-  mGrid.init_mag_grid(planet, input, report);
+  // Anton's code:
+  //mGrid.init_mag_grid(planet, input, report);
+  // Aaron's code:
+  mGrid.init_dipole_grid(quadtree, planet, input, report);
 
   mGrid.fill_grid(planet, report);
+  mGrid.fill_grid_radius(planet, report);
 
-  
   // iterate p,q; convert to r,theta,phi; 
   // p,q, is uniform, while rThPhi is non-uniform
   // feed and initialize m_neutrals with rThPhi
