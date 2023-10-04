@@ -219,11 +219,20 @@ void Grid::fill_grid_radius(Planets planet, Report &report) {
   for (iLat = 0; iLat < nLats; iLat++)
     radius0_1d(iLat) = planet.get_radius(geoLat_scgc(0, iLat, 0));
 
+// SHOW(nLats)
+// SHOW(radius0_1d)
+
   for (iLon = 0; iLon < nLons; iLon++)
     for (iAlt = 0; iAlt < nAlts; iAlt++)
       radius_scgc.subcube(iLon, 0, iAlt, iLon, nLats - 1, iAlt) = radius0_1d;
 
   radius_scgc = radius_scgc + geoAlt_scgc;
+
+// { iLon=iLat=0;
+//   SHOW(radius0_1d)
+//   for(int i=1; i<nAlts; i++) SHOW( geoAlt_scgc(iLon,iLat,i) )
+//   sleep(10);
+// }
 
   radius2_scgc = radius_scgc % radius_scgc;
   radius2i_scgc = 1.0 / radius2_scgc;
@@ -248,6 +257,10 @@ void Grid::fill_grid(Planets planet, Report &report) {
       (geoAlt_scgc.slice(iAlt + 1) - geoAlt_scgc.slice(iAlt - 1)) / 2.0;
     dalt_lower_scgc.slice(iAlt) =
       geoAlt_scgc.slice(iAlt) - geoAlt_scgc.slice(iAlt - 1);
+
+    // cout<< "dalt_center_scgc="<<
+    //     dalt_center_scgc.slice(iAlt)<<" "<<iAlt<<"\n"; sleep(0);
+
   }
 
   dalt_center_scgc.slice(0) = dalt_center_scgc.slice(1);
@@ -265,6 +278,8 @@ void Grid::fill_grid(Planets planet, Report &report) {
   for (iAlt = 0; iAlt < nAlts - 1; iAlt++)
     dalt_ratio_scgc.slice(iAlt) =
       dalt_lower_scgc.slice(iAlt + 1) / dalt_lower_scgc.slice(iAlt);
+
+// cout<<"dalt_lower_scgc.slice(iAlt)" <<dalt_lower_scgc.slice(iAlt)<<'\n';
 
   iAlt = nAlts - 1;
   dalt_ratio_scgc.slice(iAlt) = dalt_ratio_scgc.slice(iAlt - 1);
@@ -292,6 +307,8 @@ void Grid::fill_grid(Planets planet, Report &report) {
 
   // Make this into a distance:
   dlat_center_dist_scgc = dlat_center_scgc % radius_scgc;
+
+  
 
   // ---------------------------------------
   // Grid spacing for longitude:

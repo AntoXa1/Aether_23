@@ -26,6 +26,8 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   
   int64_t iLon, iLat, iAlt;
   
+  // SHOW(grid_input.dalt); exit(10);
+
   // Longitudes:
   // - Make a 1d vector
   // - copy it into the 3d cube
@@ -46,7 +48,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
     }
   }
   
-  cout << "from"<< function<< "nLats=  "<< nLats<<"\n"<<endl;
+  // cout << "from"<< function<< "nLats=  "<< nLats<<"\n"<<endl;
   
   // Latitudes:
   // - Make a 1d vector
@@ -69,14 +71,16 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   for (iLat=1; iLat < nLats; iLat++){
 
     lshell[iLat] = lshell[iLat-1]+dlshell;
-    
-    //cout << "Lshell = " << lshell(iLat)<<endl;
-    
+        
     //<
     lat1d(iLat) = grid_input.lat_min + (iLat-nGCs+0.5) * dlat;
     //>
   }
   
+  // SHOW(lshell);
+  // SHOW(lat1d); exit(10);
+
+
   //<
   for (iLon = 0; iLon < nLons; iLon++) {
     for (iAlt = 0; iAlt < nAlts; iAlt++)
@@ -121,7 +125,6 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   Gamma = 2.0;
   
   
-
   for (iLon=0; iLon < nLons; iLon++) {
     for (iLat=0; iLat < nLats; iLat++) {
 
@@ -129,7 +132,8 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
       Lon     = magPhi_scgc(iLon,iLat,1);
       
       // get the q value for N and S hemisphere
-      cout << iLon << " " << iLat << " L= "<<Lshell<<" "<< magP_scgc(iLon,iLat,1)<<endl;
+      // cout << iLon << " " << iLat << " L= "<<Lshell<<" "<< magP_scgc(iLon,iLat,1)<<endl;
+      
       auto Qvals = lshell_to_qn_qs(planet, Lshell, Lon, AltMin, report);
 
       qN = Qvals.first;
@@ -171,8 +175,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
         //cout << "i, x " << i << "  " << x[i] << endl;
         //cout << "i, r, theta " << i << "  " << r[i]<<" "<<theta[i] << endl << endl;
         
-        cout << "iX+ magPhi: " << iX <<" "<< iY << " " << iZ << " " << magPhi_scgc(iX,iY,iZ) << endl;
-        
+        // cout << "iX+ magPhi: " << iX <<" "<< iY << " " << iZ << " " << magPhi_scgc(iX,iY,iZ) << endl;
         // Llr: lat, lon, rad
 
         Llr[0] = magPhi_scgc(iX,iY,iZ);
@@ -185,18 +188,27 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
         //}
         
         transform_llr_to_xyz(Llr, Xyz);
+
         magX_scgc(iX,iY,iZ)=Xyz[0];
         magY_scgc(iX,iY,iZ)=Xyz[1];
         magZ_scgc(iX,iY,iZ)=Xyz[2];
 
-        // AD<
+
+        precision_t radius0 = planet.get_radius(0.0);
+        // SHOW(radius0)
+        // exit(10);
+
+        //<
         this->geoLon_scgc(iX,iY,iZ) = magPhi_scgc(iX,iY,iZ);
         this->geoLat_scgc(iX,iY,iZ) = theta;
         this->geoAlt_scgc(iX,iY,iZ) = r;
 
+this->geoAlt_scgc(iX,iY,iZ) *= radius0;
+
+
         // - grid_input.alt_min ?
 
-        // >AD
+        //>
         
 	    }
     }
@@ -531,7 +543,7 @@ void Grid::fill_dipole_q_line(float qN, float qS, float Gamma, int nZ, float Lsh
   double Dx;
   float Llr[3], Xyz[3];
   int DoTestLine = 0;
-  cout <<"test"<<endl;
+  
   //open test file for writing the grid data for plotting
   std::fstream gridfile;
   if (DoTestLine==1){

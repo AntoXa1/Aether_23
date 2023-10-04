@@ -57,6 +57,8 @@ int Neutrals::initial_conditions(Grid grid,
         }
       }
 
+// SHOW(grid.geoAlt_scgc) ; exit(10);
+
       msis.set_time(time);
       precision_t f107 = indices.get_f107(time.get_current());
       precision_t f107a = indices.get_f107a(time.get_current());
@@ -79,11 +81,14 @@ int Neutrals::initial_conditions(Grid grid,
           std::cout << "Setting Species : " << species[iSpecies].cName << "\n";
 
         if (msis.is_valid_species(species[iSpecies].cName)) {
-          if (report.test_verbose(3))
-            std::cout << "  Found in MSIS!\n";
+          if (report.test_verbose(3)) std::cout << "  Found in MSIS!\n";
 
           species[iSpecies].density_scgc =
             msis.get_cube(species[iSpecies].cName);
+
+          // cout<<"iSpeciesName = "<< species[iSpecies].cName <<"  "<<  species[iSpecies].density_scgc << endl;
+
+
         } else {
           if (report.test_verbose(3))
             std::cout << "  NOT Found in MSIS - setting constant\n";

@@ -7,7 +7,7 @@
 // Main file for the Aether model.  This is needed when Aether is not used
 // as a library in another code, such as the SWMF.
 // -----------------------------------------------------------------------------
-
+// #define SHOW(x) std::cout << #x"=" << x << std::endl;
 
 int main() {
 
@@ -22,6 +22,7 @@ int main() {
   report.enter(function, iFunction);
 
 
+
 cout<<"entering : "<< function <<endl;
 
   // Create inputs (reading the input file):
@@ -34,12 +35,10 @@ cout<<"entering : "<< function <<endl;
 
   Quadtree quadtree(input, report);
 
-
   DidWork = init_parallel(input, quadtree, report);
 
   // Initialize the planet:
   Planets planet(input, report);
-
 
   // Initialize the indices (and read the files):
   Indices indices(input);
@@ -51,9 +50,6 @@ cout<<"entering : "<< function <<endl;
        input.get_nAltsGeo(), nGeoGhosts);
 
 
-
-//   gGrid.init_geo_grid(planet, input, report);
-
     
   if (!quadtree.is_ok())
       throw std::string("quadtree initialization failed!");
@@ -61,30 +57,66 @@ cout<<"entering : "<< function <<endl;
   
   gGrid.fill_grid(planet, report);
 
-  // Initialize Magnetic grid:
-  cout << "input.get_nAltsMag() " <<input.get_nAltsMag()<<endl;
+  gGrid.report_grid_boundaries();
 
+  SHOW(gGrid.geoX_scgc(1,1,1)) 
+  SHOW(gGrid.geoAlt_scgc(1,1,1))
+  // exit(10);
+
+
+  {
+    int iAlt=0; int iLon=0, iLat =0;
+    
+     for (int i=1; i < gGrid.get_nAlts(); i++)
+         SHOW( gGrid.radius_scgc(iLon,iLat, i) ); 
+  
+  }
+    
+  
+
+  Neutrals neutrals(gGrid, planet, time, indices, input, report);
+
+  //------------Initialize Magnetic grid------------------
+  SHOW(input.get_nAltsMag())
+  
   Grid mGrid(input.get_nLonsMag(),
        input.get_nLatsMag(),
        input.get_nAltsMag(), nMagGhosts);
-
 
   mGrid.init_mag_grid(planet, input, report);
 
   mGrid.fill_grid(planet, report);
 
+  {
+    int iAlt=0; int iLon=0, iLat =0;
+    for (int i=1; i<mGrid.get_nAlts(); i++){
+    SHOW(mGrid.radius_scgc(iLon,iLat, i) ); 
+    SHOW(mGrid.geoAlt_scgc(iLon,iLat, i) );    
+    SHOW(i);
+    }
+    // exit(10);
+  }
   
+
+
+  // cout<< "radius_scgc = " << mGrid.radius_scgc.subcube(iLon,iLat, 0, iLon,iLat,10 ) <<" "<<iAlt <<endl; 
+  // SHOW(gGrid.dalt_center_scgc.slice(iAlt))  
+  
+  // exit(10);
+
+  //-----------------------------------------------------  
+
+
   // iterate p,q; convert to r,theta,phi; 
   // p,q, is uniform, while rThPhi is non-uniform
   // feed and initialize m_neutrals with rThPhi
 
   // Initialize Neutrals on dipole grid:
-  Neutrals m_neutrals(mGrid, planet, time, indices, input, report);
-
+  Neutrals mNeutrals(mGrid, planet, time, indices, input, report);
   cout<<" Initialize Neutrals on dipole grid: done .."<<endl;
 
 // Initialize Ions on m-geographic grid:
-    Ions m_ions(mGrid, planet, input, report);
+  Ions mIons(mGrid, planet, input, report);
   cout<<"Initialize Ions on m-geographic grid: done .."<<endl;
 
 // Once EUV, neutrals, and ions have been defined, pair cross sections
@@ -98,24 +130,24 @@ cout<<"Initialize the EUV system: done .."<<endl;
 if (!euv.is_ok())
       throw std::string("EUV initialization failed!");
     
-euv.pair_euv(m_neutrals, m_ions, report);
+euv.pair_euv(mNeutrals, mIons, report);
 
     // Initialize Chemical scheme (including reading file):
-Chemistry m_chemistry(m_neutrals, m_ions, input, report);
+Chemistry m_chemistry(mNeutrals, mIons, input, report);
 
 // Read in the collision frequencies and other diffusion coefficients:
-    read_collision_file(m_neutrals, m_ions, input, report);
+    read_collision_file(mNeutrals, mIons, input, report);
 
     // Initialize ion temperatures from neutral temperature
-    m_ions.init_ion_temperature(m_neutrals, mGrid, report);
+    mIons.init_ion_temperature(mNeutrals, mGrid, report);
 
 double dt_couple = time.get_end() - time.get_current();
 time.increment_intermediate(dt_couple);
 
 // AJR - added this stuff for one time-step:
   mGrid.calc_sza(planet, time, report);
-  m_neutrals.calc_mass_density(report);
-  m_neutrals.calc_specific_heat(report);
+  mNeutrals.calc_mass_density(report);
+  mNeutrals.calc_specific_heat(report);
   time.calc_dt();
 
 
@@ -123,8 +155,8 @@ time.increment_intermediate(dt_couple);
                   mGrid,
                   time,
                   euv,
-                  m_neutrals,
-                  m_ions,
+                  mNeutrals,
+                  mIons,
                   indices,
                   input,
                   report);
@@ -132,17 +164,27 @@ time.increment_intermediate(dt_couple);
 
  
 
-m_chemistry.calc_chemistry(m_neutrals, m_ions, time, mGrid, report); 
+cout<< " No calc_chemistry "<<endl;
+
+// m_chemistry.calc_chemistry(m_neutrals, m_ions, time, mGrid, report); 
+
 // advance chem
 
-iErr = output(m_neutrals,
-	      m_ions,
-	      mGrid,
+iErr = output(neutrals,
+	      Ions,
+	      gGrid,
 	      time,
 	      planet,
 	      input,
 	      report);
 
+// iErr = output(mNeutrals,
+// 	      mIons,
+// 	      mGrid,
+// 	      time,
+// 	      planet,
+// 	      input,
+// 	      report);
  
 cout<<"----------" << "init mGrid.mag_grid is ok"<<endl;
 

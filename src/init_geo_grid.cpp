@@ -439,9 +439,15 @@ void Grid::create_altitudes(Planets planet, Inputs input, Report &report) {
 
   Inputs::grid_input_struct grid_input = input.get_grid_inputs();
 
+
+
   if (grid_input.IsUniformAlt) {
     for (iAlt = 0; iAlt < nAlts; iAlt++)
       alt1d(iAlt) = grid_input.alt_min + (iAlt - nGeoGhosts) * grid_input.dalt;
+
+      // SHOW(grid_input.IsUniformAlt); 
+      // SHOW(grid_input.dalt); exit(10);
+      
   } else {
 
     json neutrals = planet.get_neutrals();
@@ -519,6 +525,8 @@ void Grid::create_altitudes(Planets planet, Inputs input, Report &report) {
       mass = 0.0;
       density = 0.0;
 
+      // SHOW(alt1d); 
+
       for (iSp = 0; iSp < nSp; iSp++) {
         mass = mass + masses(iSp) * densities[iSp];
         density = density + densities[iSp];
@@ -554,6 +562,7 @@ void Grid::create_altitudes(Planets planet, Inputs input, Report &report) {
       geoAlt_Below.tube(iLon, iLat) = alt1d_below;
     }
   }
+  // SHOW(geoAlt_scgc)
 
   for (iLon = 0; iLon < nLons + 1; iLon++) {
     for (iLat = 0; iLat < nLats + 1; iLat++)
