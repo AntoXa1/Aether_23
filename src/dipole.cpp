@@ -16,7 +16,7 @@ precision_t get_lshell(precision_t lat, precision_t rNorm) {
   return lshell;
 }
 
-arma_vec get_lat_from_r_and_lshell(arma_vec r, arma_vec lshell) {
+arma_vec get_lat_from_r_and_lshell(arma_vec r, precision_t lshell) {
   arma_vec cosLat = sqrt(r / lshell);
   cosLat.clamp(-1.0, 1.0);
   arma_vec lat = acos(cosLat);
