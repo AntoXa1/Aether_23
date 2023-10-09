@@ -48,7 +48,7 @@ endif()
 
 # Set compiler and cmake options
 # target_compile_options(aether PUBLIC -ffast-math -O3)
-target_compile_options(aether PUBLIC -ffast-math)
+target_compile_options(aether PUBLIC)
 
 set(SHARE_INCLUDE ${PROJECT_SOURCE_DIR}/share/include)
 set(CMAKE_CXX_STANDARD 11)

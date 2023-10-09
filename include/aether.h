@@ -1,6 +1,8 @@
 // Copyright 2020, the Aether Development Team (see doc/dev_team.md for members)
 // Full license can be found in License.md
 
+#define SHOW(x) std::cout << #x"=" << x << std::endl;
+
 #ifndef INCLUDE_AETHER_H_
 #define INCLUDE_AETHER_H_
 
