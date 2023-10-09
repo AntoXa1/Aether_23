@@ -209,14 +209,14 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
         // if (iX == 5 & iY == 5)
         //   cout << "lon, lat, alt: " << magPhi_scgc(iX,iY,iZ) << " "
         //   << theta << " " << r 
-          << " " << magP_scgc(iX,iY,iZ) 
-          << " " << magQ_scgc(iX,iY,iZ) << "\n";
+        //  << " " << magP_scgc(iX,iY,iZ) 
+        //  << " " << magQ_scgc(iX,iY,iZ) << "\n";
 
         this->geoLon_scgc(iX,iY,iZ) = magPhi_scgc(iX,iY,iZ);
         this->geoLat_scgc(iX,iY,iZ) = theta;
         this->geoAlt_scgc(iX,iY,iZ) = r;
 
-this->geoAlt_scgc(iX,iY,iZ) *= radius0;
+        this->geoAlt_scgc(iX,iY,iZ) *= radius0;
 
 
         // - grid_input.alt_min ?
