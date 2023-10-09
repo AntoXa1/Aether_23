@@ -288,6 +288,7 @@ Inputs::grid_input_struct Inputs::get_mgrid_inputs() {
   mag_grid_input.alt_file = settings["MagGrid"]["AltFile"];
   mag_grid_input.IsUniformAlt = settings["MagGrid"]["IsUniformAlt"];
   mag_grid_input.alt_min = settings["MagGrid"]["MinAlt"];
+  mag_grid_input.alt_max = settings["MagGrid"]["MaxAlt"];
   mag_grid_input.min_apex = settings["MagGrid"]["MinApex"];
   mag_grid_input.dalt = settings["MagGrid"]["dAlt"];
 
@@ -300,6 +301,7 @@ Inputs::grid_input_struct Inputs::get_mgrid_inputs() {
 
   // Second Change Units
   mag_grid_input.alt_min = mag_grid_input.alt_min * cKMtoM;
+  mag_grid_input.alt_max = mag_grid_input.alt_max * cKMtoM;
   mag_grid_input.min_apex = mag_grid_input.min_apex * cKMtoM;
 
   mag_grid_input.lat_min = mag_grid_input.lat_min * cDtoR;

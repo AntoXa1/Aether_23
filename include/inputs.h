@@ -62,6 +62,7 @@ public:
     std::string alt_file;
     bool IsUniformAlt;
     precision_t alt_min;
+    precision_t alt_max;
     precision_t dalt;
     precision_t lat_min;
     precision_t lat_max;
