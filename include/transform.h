@@ -18,6 +18,7 @@ void copy_vector_to_array(std::vector<float> vector_in,
 			  float *array_out);
 
 std::vector<arma_cube> transform_llr_to_xyz_3d(std::vector<arma_cube> llr);
+std::vector<arma_cube> transform_xyz_to_llr_3d(std::vector<arma_cube> xyz);
 std::vector<arma_cube> rotate_around_x_3d(std::vector<arma_cube> XYZ_in, precision_t angle);
 std::vector<arma_cube> rotate_around_y_3d(std::vector<arma_cube> XYZ_in, precision_t angle);
 std::vector<arma_cube> rotate_around_z_3d(std::vector<arma_cube> XYZ_in, precision_t angle);
