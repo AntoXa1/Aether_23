@@ -18,34 +18,47 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   static int iFunction = -1;
   report.enter(function, iFunction);
   
-  // This is just an example:
-  
-  Inputs::grid_input_struct grid_input = input.get_grid_inputs();
+// turn the switch on! 
+  this->set_IsMagGrid(1);
+
+  // This is just an example:  
+  Inputs::grid_input_struct grid_input = input.get_mgrid_inputs();
   
   int64_t iLon, iLat, iAlt;
-
-
   
+  // SHOW(grid_input.dalt); exit(10);
+
   // Longitudes:
   // - Make a 1d vector
   // - copy it into the 3d cube
   fvec lon1d(nLons);
   float dlon = (grid_input.lon_max - grid_input.lon_min) / (nLons-2*nGCs);
+
   for (iLon=0; iLon < nLons; iLon++)
     lon1d[iLon] = grid_input.lon_min + (iLon-nGCs+0.5) * dlon;
   
   for (iLat=0; iLat < nLats; iLat++) {
     for (iAlt=0; iAlt < nAlts; iAlt++) {
+
       magLon_scgc.subcube(0, iLat, iAlt, nLons-1, iLat, iAlt) = lon1d;
-      magPhi_scgc.subcube(0, iLat, iAlt, nLons-1, iLat, iAlt) = lon1d;
+      
+      // AD: does below make sense?
+      // magPhi_scgc.subcube(0, iLat, iAlt, nLons-1, iLat, iAlt) = lon1d;
+
     }
   }
-  cout << "!!!!!!!!!!! HA1 "<< nLats<<endl;
+  
+
+  // cout << "from"<< function<< "nLats=  "<< nLats<<"\n"<<endl;
+
+  magPhi_scgc = magLon_scgc;
+
   
   // Latitudes:
   // - Make a 1d vector
   // - copy it into the 3d cube
   fvec lat1d(nLats);
+  
   //cout << "!!!!!!!!!!! HA1a "<<endl;
 
 
@@ -54,26 +67,47 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   float dlat = (grid_input.lat_max - grid_input.lat_min) / (nLats-2*nGCs);
   
   lshell(0) = 1/pow(cos(grid_input.lat_min),2.0);
+  
   lshell(nLats-1) = 1/pow(cos(grid_input.lat_max),2.0);
+
   float dlshell = (lshell(nLats-1)-lshell(0))/nLats;
   
   for (iLat=1; iLat < nLats; iLat++){
+
     lshell[iLat] = lshell[iLat-1]+dlshell;
-    //cout << "Lshell = " << lshell(iLat)<<endl;
-    //lat1d(iLat) = grid_input.lat_min + (iLat-nGCs+0.5) * dlat;
+        
+    //<
+    lat1d(iLat) = grid_input.lat_min + (iLat-nGCs+0.5) * dlat;
+    //>
   }
   
+  // SHOW(lshell);
+  // SHOW(lat1d); exit(10);
+
+
+  //<
+  for (iLon = 0; iLon < nLons; iLon++) {
+    for (iAlt = 0; iAlt < nAlts; iAlt++)
+      this->magLat_scgc.subcube(iLon, 0, iAlt, iLon, nLats - 1, iAlt) = lat1d;
+  }
+  //>
+
+
   for (iLon=0; iLon < nLons; iLon++) {
     for (iAlt=0; iAlt < nAlts; iAlt++) {
+    
       //magP_scgc.subcube(iLon, 0, iAlt, iLon, nLats-1, iAlt) = lshell;
+    
       for (iLat=0; iLat<nLats; iLat++){
-	//cout << "L fill " << lshell[iLat] << endl;
-	magP_scgc(iLon, iLat, iAlt) = lshell[iLat];
-	//if (iLon==12 and iLat==10 and iAlt==1){
-	  //cout << iLon<<" "<< iLat <<" "<< iAlt <<" P fill " << magP_scgc(iLon,iLat,iAlt) << endl;
-	//}
-	//cout << iLon<<" "<< iLat <<" "<< iAlt <<" P fill " << magP_scgc(12,10,1) << endl;
-	//cout << "magP_scgc[iLon, iLat, iAlt] = lshell[iLat];"<<" "<<magP_scgc[iLon, iLat, iAlt] <<" " <<lshell[iLat] << endl;
+	      //cout << "L fill " << lshell[iLat] << endl;
+	      
+        magP_scgc(iLon, iLat, iAlt) = lshell[iLat];
+
+	      //if (iLon==12 and iLat==10 and iAlt==1){
+	      //cout << iLon<<" "<< iLat <<" "<< iAlt <<" P fill " << magP_scgc(iLon,iLat,iAlt) << endl;
+	      //}
+	      //cout << iLon<<" "<< iLat <<" "<< iAlt <<" P fill " << magP_scgc(12,10,1) << endl;
+	      //cout << "magP_scgc[iLon, iLat, iAlt] = lshell[iLat];"<<" "<<magP_scgc[iLon, iLat, iAlt] <<" " <<lshell[iLat] << endl;
       }
     }
   }
@@ -95,15 +129,17 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   Gamma = 2.0;
   
   
-
   for (iLon=0; iLon < nLons; iLon++) {
     for (iLat=0; iLat < nLats; iLat++) {
+
       Lshell  = magP_scgc(iLon,iLat,1);
       Lon     = magPhi_scgc(iLon,iLat,1);
       
       // get the q value for N and S hemisphere
-      cout << iLon << " " << iLat << " L= "<<Lshell<<" "<< magP_scgc(iLon,iLat,1)<<endl;
+      // cout << iLon << " " << iLat << " L= "<<Lshell<<" "<< magP_scgc(iLon,iLat,1)<<endl;
+      
       auto Qvals = lshell_to_qn_qs(planet, Lshell, Lon, AltMin, report);
+
       qN = Qvals.first;
       qS = Qvals.second;
 
@@ -115,7 +151,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
 
       //copy this q array into
       for (iAlt=0;iAlt<nAlts; iAlt++){
-	magQ_scgc(iLon, iLat, iAlt) = q[iAlt];
+	      magQ_scgc(iLon, iLat, iAlt) = q[iAlt];
       }
     }
   }
@@ -126,40 +162,73 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   int iX, iY, iZ;
   
   for (iX=0; iX<nX; iX++){
-      for (iY=0; iY<nY; iY++){
-	  for (iZ=0; iZ<nZ; iZ++){
+    for (iY=0; iY<nY; iY++){
+      for (iZ=0; iZ<nZ; iZ++){
 	    
 	    
-	    // For given q and p we can now find cooresponding r and theta in
-	    // dipole coord. Starty by numerically solving for r (normalized) 
-	    // using equation 4 of Huba et al 2000 given by q^2r^4+1/p r -1 = 0
-	    auto rtheta =
-	      p_q_to_r_theta(magP_scgc(iX,iY,iZ), magQ_scgc(iX,iY,iZ));
-	    
-	    float r = rtheta.first;
-	    float theta = rtheta.second;
-  
-	    //cout << "i, q " << i << "  " << q[i] << endl;
-	    //cout << "i, x " << i << "  " << x[i] << endl;
-	    //cout << "i, r, theta " << i << "  " << r[i]<<" "<<theta[i] << endl << endl;
-	    
-	    cout << iX <<" "<< iY << " " << iZ << " " << magPhi_scgc(iX,iY,iZ) << endl;
-	    Llr[0] = magPhi_scgc(iX,iY,iZ);
-	    Llr[1] = 0.5*cPI-theta;
-	    Llr[2] = r;
+        // For given q and p we can now find cooresponding r and theta in
+        // dipole coord. Starty by numerically solving for r (normalized) 
+        // using equation 4 of Huba et al 2000 given by q^2r^4+1/p r -1 = 0
+        auto rtheta =
+          p_q_to_r_theta(magP_scgc(iX,iY,iZ), magQ_scgc(iX,iY,iZ));
+        
+        float r = rtheta.first;
+        float theta = rtheta.second;
+     
+        //cout << "i, q " << i << "  " << q[i] << endl;
+        //cout << "i, x " << i << "  " << x[i] << endl;
+        //cout << "i, r, theta " << i << "  " << r[i]<<" "<<theta[i] << endl << endl;
+        
+        //cout << "iX+ magPhi: " << iX <<" "<< iY << " " << iZ << " " << magPhi_scgc(iX,iY,iZ) << endl;
+        
+        // Llr: lat, lon, rad
 
-	    //if (iZ==nZ/2){
-	    //  cout << magP_scgc(iX,iY,iZ) <<endl;
-	    //  cout << Llr[0]<<" "<<Llr[1]<<" "<<Llr[2] << endl;
-	    //}
-	    
-	    transform_llr_to_xyz(Llr, Xyz);
-	    magX_scgc(iX,iY,iZ)=Xyz[0];
-	    magY_scgc(iX,iY,iZ)=Xyz[1];
-	    magZ_scgc(iX,iY,iZ)=Xyz[2];
-	  }
-      }
+        Llr[0] = magPhi_scgc(iX,iY,iZ);
+        Llr[1] = 0.5*cPI - theta;
+        Llr[2] = r;
+
+        //if (iZ==nZ/2){
+        //  cout << magP_scgc(iX,iY,iZ) <<endl;
+        //  cout << Llr[0]<<" "<<Llr[1]<<" "<<Llr[2] << endl;
+        //}
+        
+        transform_llr_to_xyz(Llr, Xyz);
+
+        magX_scgc(iX,iY,iZ)=Xyz[0];
+        magY_scgc(iX,iY,iZ)=Xyz[1];
+        magZ_scgc(iX,iY,iZ)=Xyz[2];
+
+
+        precision_t radius0 = planet.get_radius(0.0);
+        // SHOW(radius0)
+        // exit(10);
+
+        //<
+
+
+        // if (iX == 5 & iY == 5)
+        //   cout << "lon, lat, alt: " << magPhi_scgc(iX,iY,iZ) << " "
+        //   << theta << " " << r 
+        //  << " " << magP_scgc(iX,iY,iZ) 
+        //  << " " << magQ_scgc(iX,iY,iZ) << "\n";
+
+        this->geoLon_scgc(iX,iY,iZ) = magPhi_scgc(iX,iY,iZ);
+        this->geoLat_scgc(iX,iY,iZ) = theta;
+        this->geoAlt_scgc(iX,iY,iZ) = r;
+
+        this->geoAlt_scgc(iX,iY,iZ) *= radius0;
+
+
+        // - grid_input.alt_min ?
+
+        //>
+        
+	    }
+    }
   }
+
+
+
 
 
   // save 3D mag grid for examination
@@ -177,10 +246,10 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
     for (iY=0; iY<nY; iY++){
       for (iZ=0; iZ<nZ; iZ++){
 	
-	gridfile << std::fixed << magX_scgc(iX,iY,iZ)
-		 <<" "<< std::fixed << magY_scgc(iX,iY,iZ)
-		 <<" "<< std::fixed << magZ_scgc(iX,iY,iZ)
-		 << endl;
+        gridfile << std::fixed << magX_scgc(iX,iY,iZ)
+          <<" "<< std::fixed << magY_scgc(iX,iY,iZ)
+          <<" "<< std::fixed << magZ_scgc(iX,iY,iZ)
+          << endl;
       }
     }
   }
@@ -212,7 +281,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   
   // Calculate the radius, etc:
   
-  //  fill_grid_radius(planet, report);
+  fill_grid_radius(planet, report);
   
   //  fill_grid_bfield(planet, input, report);
   
@@ -279,8 +348,6 @@ std::pair<float,float> Grid::lshell_to_qn_qs(Planets planet, float Lshell, float
   // note we normalize Lshell by equatorial radius
   float RadiusEq = planet.get_radius(0.0);
 
-
-  
 
   // loop for qN and qS
   for(int iQ = 0; iQ < 2; iQ++){
@@ -416,12 +483,12 @@ std::pair<float,float> Grid::lshell_to_qn_qs(Planets planet, float Lshell, float
     rDipoleMid    = Lshell * pow(sin(ThetaMid),2.0);
     if (iQ ==0){
       qN = pow(rDipoleMid,-2.0)*cos(ThetaMid);
-      cout << "!!! For L = " << Lshell << endl;
-      cout << "!!! qN = " << qN << endl;
-      cout << "!!! ThetaMid = " << ThetaMid*cRtoD << endl;
+      // cout << "!!! For L = " << Lshell << endl;
+      // cout << "!!! qN = " << qN << endl;
+      // cout << "!!! ThetaMid = " << ThetaMid*cRtoD << endl;
     }else{
       qS = pow(rDipoleMid,-2.0)*cos(ThetaMid);
-      cout << "!!! qS = " << qS << endl;
+      // cout << "!!! qS = " << qS << endl;
     }
   }
 
@@ -489,7 +556,7 @@ void Grid::fill_dipole_q_line(float qN, float qS, float Gamma, int nZ, float Lsh
   double Dx;
   float Llr[3], Xyz[3];
   int DoTestLine = 0;
-  cout <<"test"<<endl;
+  
   //open test file for writing the grid data for plotting
   std::fstream gridfile;
   if (DoTestLine==1){
@@ -502,7 +569,9 @@ void Grid::fill_dipole_q_line(float qN, float qS, float Gamma, int nZ, float Lsh
   // x from equation 7, and then dividing that into
   // equal segments.
   //Dx = 2.0*(1.0-sinh(Gamma*qN))/((static_cast<float>(nZ)-1.0)*sinh(Gamma*qS));
+
   Dx = (sinh(Gamma*qS)-sinh(Gamma*qN))/((static_cast<float>(nZ)-1.0)*sinh(Gamma*qS));
+  
   //Dx = 2.0/(static_cast<float>(nZ)-1.0);
   //Dx = (static_cast<double>(qN)-static_cast<double>(qS))/(static_cast<double>(nZ)-1.0);
 
@@ -540,7 +609,10 @@ void Grid::fill_dipole_q_line(float qN, float qS, float Gamma, int nZ, float Lsh
      transform_llr_to_xyz(Llr, Xyz);
 
      if (DoTestLine==1){
-       gridfile << Xyz[0] <<" "<< Xyz[1] <<" "<< Xyz[2] << endl;
+       gridfile << Xyz[0] <<" " 
+                << Xyz[1] <<" "
+                << Xyz[2] <<" "
+                << Lshell <<  endl;
 
      }
   }
@@ -572,18 +644,35 @@ std::pair<float,float> Grid::p_q_to_r_theta(float p, float q) {
   float Tolerance = 0.00001;
 
   // initial guess for r
-  r = 1.0;
-  
+  r = 100.0;
+
   Func= pow(q,2.0) * pow(r,4.0) + 1.0/p*r-1;
   dFunc= 4.0*pow(q,2.0) * pow(r,3.0) + 1.0/p;
+  
+  // cout<< "p,q="<<p<<" "<<q << endl;
+  // cout<< Func<<" "<<dFunc;
+  // cout<<endl;
+
+  int itr=0;
+  int maxItr=100;
 
   // apply NR iterations to get 
-  while( abs(Func/dFunc) > Tolerance ) { 
-    Func= pow(q,2.0) * pow(r,4.0) + 1.0/p*r-1;
-    dFunc= 4.0*pow(q,2.0) * pow(r,3.0) + 1.0/p;
-    
-    // in NR method r(i+1)=r(i)-f/f' for each iteration
-    r=r-Func/dFunc;
+  while( abs(Func/dFunc) > Tolerance) { 
+    try {
+      Func= pow(q,2.0) * pow(r,4.0) + 1.0/p*r-1;
+      dFunc= 4.0*pow(q,2.0) * pow(r,3.0) + 1.0/p;
+      
+      // in NR method r(i+1)=r(i)-f/f' for each iteration
+      
+      r = r - Func/dFunc;
+
+      if (++itr > maxItr){ throw(itr);}
+    }
+    catch (int itr){
+        cout<<"WARN: exceeded max #iterations.. exiting ";
+        exit(10);
+    }
+    // cout << r << " " << Func << " "<< dFunc << endl;
   }
   
   // now that r is determined we can solve for theta
@@ -598,3 +687,162 @@ std::pair<float,float> Grid::p_q_to_r_theta(float p, float q) {
   
   return {r,theta};
 }
+
+arma_vec get_r3_spacing(precision_t lat, precision_t rMin, 
+                        precision_t rMax, int64_t nPts, int64_t nGcs) {
+
+  precision_t rMaxReal = rMax;
+
+  precision_t lShell = get_lshell(lat, rMin);
+  if (lShell < rMaxReal) {
+    rMaxReal = lShell;
+    std::cout << "Limiting rMaxReal from " << rMax << " to " << rMaxReal << "\n";
+  }
+  precision_t rMin3 = pow(rMin, 1.0/3.0);
+  precision_t rMax3 = pow(rMaxReal, 1.0/3.0);
+  precision_t dr3 = (rMax3 - rMin3) / (nPts-nGcs*2);
+  arma_vec r(nPts);
+  for (int64_t iPt = 0; iPt < nPts; iPt++) {
+    r(iPt) = pow(rMin3 + dr3 * (iPt - nGcs), 3);
+  }
+  return r;
+}
+
+// ----------------------------------------------------------------------
+// Initialize the geographic grid.  At the moment, this is a simple
+// Lon/Lat/Alt grid.  The grid structure is general enough that each
+// of the lon, lat, and alt can be a function of the other variables.
+// ----------------------------------------------------------------------
+
+void Grid::init_dipole_grid(Quadtree quadtree, Planets planet, Inputs input, Report &report) {
+  
+  std::string function = "Grid::init_dipole_grid";
+  static int iFunction = -1;
+  report.enter(function, iFunction);
+  
+// turn the switch on! 
+  IsMagGrid = true;
+
+  int64_t iLon, iLat, iAlt;
+
+  // This is just an example:  
+  report.print(3, "Getting mgrid_inputs inputs in dipole grid");
+
+  Inputs::grid_input_struct grid_input = input.get_mgrid_inputs();
+
+  report.print(3, "Setting inputs in dipole grid");
+  precision_t min_apex = grid_input.min_apex;
+  precision_t min_alt = grid_input.alt_min;
+  precision_t max_alt = grid_input.alt_max;
+  precision_t planetRadius = planet.get_radius(0.0);
+  precision_t min_lshell = (min_apex + planetRadius)/planetRadius;
+  precision_t min_r = (min_alt + planetRadius)/planetRadius;
+  precision_t max_r = (max_alt + planetRadius)/planetRadius;
+  precision_t min_lat = get_lat_from_r_and_lshell(min_r, min_lshell);
+  precision_t stretch = (cPI/2 - min_lat) / (cPI/2);
+  report.print(3, "Done setting inputs in dipole grid");
+
+  // Get some coordinates and sizes in normalized coordinates:
+  arma_vec lower_left_norm = quadtree.get_vect("LL");
+  arma_vec size_right_norm = quadtree.get_vect("SR");
+  arma_vec size_up_norm = quadtree.get_vect("SU");
+
+  precision_t dlon = size_right_norm(0) * cPI / (nLons - 2 * nGCs);
+  precision_t lon0 = lower_left_norm(0) * cPI;
+  arma_vec lon1d(nLons);
+
+  // Longitudes:
+  // - Make a 1d vector
+  // - copy it into the 3d cube
+  for (iLon = 0; iLon < nLons; iLon++)
+    lon1d(iLon) = lon0 + (iLon - nGCs + 0.5) * dlon;
+
+  for (iLat = 0; iLat < nLats; iLat++) {
+    for (iAlt = 0; iAlt < nAlts; iAlt++)
+      magLon_scgc.subcube(0, iLat, iAlt, nLons - 1, iLat, iAlt) = lon1d;
+  }
+
+  geoLon_scgc = magLon_scgc;
+
+  precision_t dlat = size_up_norm(1) * cPI / (nLats - 2 * nGCs);
+  precision_t lat0 = lower_left_norm(1) * cPI;
+
+  arma_vec lat1d(nLats);
+
+  // Latitudes:
+  // - Make a 1d vector
+  // - copy it into the 3d cube
+  for (iLat = 0; iLat < nLats; iLat++) {
+    lat1d(iLat) = lat0 + (iLat - nGCs + 0.5) * dlat;
+    std::cout << "Original : " <<  lat1d(iLat) << " ";
+    if (lat1d(iLat) >= 0) {
+      lat1d(iLat) = min_lat + lat1d(iLat) * stretch;
+    } else {
+      lat1d(iLat) = -min_lat + lat1d(iLat) * stretch;
+    }
+    std::cout << "Final : " <<  lat1d(iLat) << "\n";
+
+  }
+  for (iLon = 0; iLon < nLons; iLon++) {
+    for (iAlt = 0; iAlt < nAlts; iAlt++)
+      magLat_scgc.subcube(iLon, 0, iAlt, iLon, nLats - 1, iAlt) = lat1d;
+  }
+
+  arma_vec rNorm1d, lat1dAlong;
+  arma_cube r3d(nLons, nLats, nAlts);
+
+  precision_t lShell;
+
+  for (iLat = 0; iLat < nLats; iLat++) {
+    lat0 = lat1d(iLat);
+    if (lat0 > cPI/2) lat0 = cPI - lat0;
+    if (lat0 < -cPI/2) lat0 = -cPI - lat0;
+    lShell = get_lshell(lat0, min_r);
+    std::cout << "lShell : " << lat0 * cRtoD << " " << lShell << "\n";
+    std::cout << "min_r : " << min_r << " " << max_r << " " << nAlts << " " << nGCs << "\n";
+    rNorm1d = get_r3_spacing(lat0, min_r, max_r, nAlts, nGCs);
+    lat1dAlong = get_lat_from_r_and_lshell(rNorm1d, lShell);
+    if (lat0 < 0)
+      lat1dAlong = -1.0 * lat1dAlong;
+    for (iLon = 0; iLon < nLons; iLon++) {
+      r3d.tube(iLon, iLat) = rNorm1d * planetRadius;
+      magLat_scgc.tube(iLon, iLat) = lat1dAlong;
+    }
+  }
+
+  geoLat_scgc = magLat_scgc;
+  magAlt_scgc = r3d - planetRadius;
+
+  std::vector<arma_cube> llr, xyz, xyzRot1, xyzRot2;
+  llr.push_back(magLon_scgc);
+  llr.push_back(magLat_scgc);
+  llr.push_back(r3d);
+  xyz = transform_llr_to_xyz_3d(llr);
+
+  precision_t magnetic_pole_rotation = planet.get_dipole_rotation();
+  precision_t magnetic_pole_tilt = planet.get_dipole_tilt();
+
+  // Reverse our dipole rotations:
+  xyzRot1 = rotate_around_y_3d(xyz, magnetic_pole_tilt);
+  xyzRot2 = rotate_around_z_3d(xyzRot1, magnetic_pole_rotation);
+
+  // transform back to lon, lat, radius:
+  llr = transform_xyz_to_llr_3d(xyzRot2);
+
+  geoLon_scgc = llr[0];
+  geoLat_scgc = llr[1];
+  geoAlt_scgc = llr[2] - planetRadius;
+
+  std::cout << "magLon : " << magLon_scgc(12,10,5) * cRtoD << " "
+              << magLat_scgc(12,10,5) * cRtoD << " "
+              << magAlt_scgc(12,10,5) / 1000.0 << "\n";
+
+  std::cout << "geoLon : " << geoLon_scgc(12,10,5) * cRtoD << " "
+              << geoLat_scgc(12,10,5) * cRtoD << " "
+              << geoAlt_scgc(12,10,5) / 1000.0 << "\n";
+
+  report.exit(function);
+  return;
+
+}
+

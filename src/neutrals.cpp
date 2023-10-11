@@ -52,7 +52,14 @@ Neutrals::species_chars Neutrals::create_species(Grid grid) {
 //  Initialize neutrals
 // -----------------------------------------------------------------------------
 
-Neutrals::Neutrals(Grid grid, Inputs input, Report report) {
+
+
+Neutrals::Neutrals(Grid grid,
+                   Planets planet,
+                   Times time,
+                   Indices indices,
+                   Inputs input,
+                   Report report) {
 
   int iErr;
   species_chars tmp;
@@ -63,10 +70,16 @@ Neutrals::Neutrals(Grid grid, Inputs input, Report report) {
 
   report.print(2, "Initializing Neutrals");
 
+  json planet_neutrals = planet.get_neutrals();
+
   for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
     tmp = create_species(grid);
     species.push_back(tmp);
   }
+
+  velocity_name.push_back("Zonal Wind");
+  velocity_name.push_back("Meridional Wind");
+  velocity_name.push_back("Vertical Wind");
 
   // State variables:
 
@@ -97,30 +110,35 @@ Neutrals::Neutrals(Grid grid, Inputs input, Report report) {
 
   conduction_scgc.set_size(nLons, nLats, nAlts);
   heating_euv_scgc.set_size(nLons, nLats, nAlts);
+  heating_chemical_scgc.set_size(nLons, nLats, nAlts);
 
   heating_efficiency = input.get_euv_heating_eff_neutrals();
 
-  initial_temperatures = NULL;
-  initial_altitudes = NULL;
-
   // This gets a bunch of the species-dependent characteristics:
-  iErr = read_planet_file(input, report);
-
+  iErr = read_planet_file(planet, input, report);
   if (iErr > 0)
     std::cout << "Error reading planet file!" << '\n';
 
   // This specifies the initial conditions for the neutrals:
-  iErr = initial_conditions(grid, input, report);
+  iErr = initial_conditions(grid, time, indices, input, report);
 
   if (iErr > 0)
     std::cout << "Error in setting neutral initial conditions!" << '\n';
+
+// AD<
+  // project Neutrals on a dipole grid  
+  // iErr = initial_conditions_neutrals_dipole_grid(grid, time, indices, input, report);
+// >AD
+
+  if (iErr > 0)
+    std::cout << "Error in setting neutrals on dipole grid!" << '\n';
 }
 
 // -----------------------------------------------------------------------------
 // Read in the planet file that describes the species - only neutrals
 // -----------------------------------------------------------------------------
 
-int Neutrals::read_planet_file(Inputs input, Report report) {
+int Neutrals::read_planet_file(Planets planet, Inputs input, Report report) {
 
   int iErr = 0;
   std::string hash;
@@ -128,224 +146,111 @@ int Neutrals::read_planet_file(Inputs input, Report report) {
 
   report.print(3, "In read_planet_file for Neutrals");
 
-  infile_ptr.open(input.get_planet_species_file());
+  json neutrals = planet.get_neutrals();
 
-  if (!infile_ptr.is_open()) {
-    std::cout << "Could not open input file: "
-              << input.get_planet_species_file() << "!!!\n";
-    iErr = 1;
-  } else {
+  nSpecies = neutrals["name"].size();
 
-    int IsDone = 0;
+  for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
+    species[iSpecies].cName = neutrals["name"][iSpecies];
+    double mass = neutrals["mass"][iSpecies];
+    species[iSpecies].mass = mass * cAMU;
+    species[iSpecies].vibe = neutrals["vibration"][iSpecies];
+    species[iSpecies].thermal_cond = neutrals["thermal_cond"][iSpecies];
+    species[iSpecies].thermal_exp = neutrals["thermal_exp"][iSpecies];
+    species[iSpecies].DoAdvect = neutrals["advect"][iSpecies];
+    species[iSpecies].lower_bc_density = neutrals["BC"][iSpecies];
+  }
 
-    while (!IsDone) {
+  json temperatures = planet.get_temperatures();
+  nInitial_temps = temperatures["alt"].size();
 
-      hash = find_next_hash(infile_ptr);
-
-      if (report.test_verbose(4))
-        std::cout << "hash : -->" << hash << "<--\n";
-
-      if (hash == "#neutrals") {
-        // Read in the characteristics as CSVs:
-        report.print(4, "Found #neutrals!");
-
-        std::vector<std::vector<std::string>> lines = read_csv(infile_ptr);
-
-        // I should totally redo the initialization of the species,
-        // since we could just do it here, but that is for the future.
-
-        if (lines.size() - 1 != nSpecies) {
-          std::cout << "number of neutrals species defined in planet.h file : "
-                    << nSpecies << "\n";
-          std::cout << "number of species defined in planet.in file : "
-                    << lines.size() << "\n";
-          std::cout << "These don't match!\n";
-          iErr = 1;
-        } else {
-          // assume order of rows right now:
-          // name, mass, vibration, thermal_cond, thermal_exp, advect, lower BC
-
-          for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
-            report.print(5, "setting neutral species " + lines[iSpecies + 1][0]);
-            species[iSpecies].cName = lines[iSpecies + 1][0];
-            species[iSpecies].mass = stof(lines[iSpecies + 1][1]) * cAMU;
-            species[iSpecies].vibe = stof(lines[iSpecies + 1][2]);
-            species[iSpecies].thermal_cond = stof(lines[iSpecies + 1][3]);
-            species[iSpecies].thermal_exp = stof(lines[iSpecies + 1][4]);
-            species[iSpecies].DoAdvect = stoi(lines[iSpecies + 1][5]);
-            species[iSpecies].lower_bc_density = stof(lines[iSpecies + 1][6]);
-          }  // iSpecies
-        }  // else size
-      }  // #neutrals
-
-      if (hash == "#temperature") {
-
-        report.print(4, "Found #temperatures!");
-
-        std::vector<std::vector<std::string>> temps = read_csv(infile_ptr);
-
-        int nTemps = temps.size() - 1;
-        initial_temperatures =
-          static_cast<float*>(malloc(nTemps * sizeof(float)));
-        initial_altitudes =
-          static_cast<float*>(malloc(nTemps * sizeof(float)));
-
-        for (int iTemp = 0; iTemp < nTemps; iTemp++) {
-          report.print(5, "reading initial temp alt " + temps[iTemp + 1][0]);
-          // convert altitudes from km to m
-          initial_altitudes[iTemp] = stof(temps[iTemp + 1][0]) * 1000;
-          initial_temperatures[iTemp] = stof(temps[iTemp + 1][1]);
-        }  // for iTemp
-
-        nInitial_temps = nTemps;
-      }  // #temperature
-
-      if (infile_ptr.eof())
-        IsDone = 1;
-    }   // while !IsDone
-
-    infile_ptr.close();
-  }  // else (isopen)
-
-  return iErr;
-}
-
-// -----------------------------------------------------------------------------
-//  This is a place holder for creating initial conditions
-// -----------------------------------------------------------------------------
-
-int Neutrals::initial_conditions(Grid grid, Inputs input, Report report) {
-
-  int iErr = 0;
-  int64_t iLon, iLat, iAlt, iA;
-  precision_t alt, r;
-
-  report.print(3, "Creating Neutrals initial_condition");
-
-  if (input.get_do_restart()) {
-    report.print(1, "Restarting! Reading neutral files!");
-    bool DidWork = restart_file(input.get_restartin_dir(), DoRead);
-
-    if (!DidWork)
-      std::cout << "Reading Restart for Neutrals Failed!!!\n";
-  } else {
-
-    // ---------------------------------------------------------------------
-    // This section assumes we want a hydrostatic solution given the
-    // temperature profile in the planet.in file.
-    // ---------------------------------------------------------------------
-
-    int64_t nLons = grid.get_nLons();
-    int64_t nLats = grid.get_nLats();
-    int64_t nAlts = grid.get_nAlts();
-
-    // Let's assume that the altitudes are not dependent on lat/lon:
-
-    arma_vec alt1d(nAlts);
-    arma_vec temp1d(nAlts);
-
-    arma_mat H2d(nLons, nLats);
-
-    alt1d = grid.geoAlt_scgc.tube(0, 0);
-
-    if (nInitial_temps > 0) {
-      for (iAlt = 0; iAlt < nAlts; iAlt++) {
-        alt = alt1d(iAlt);
-
-        // Find temperatures:
-        if (alt <= initial_altitudes[0])
-          temp1d[iAlt] = initial_temperatures[0];
-
-        else {
-          if (alt >= initial_altitudes[nInitial_temps - 1])
-            temp1d[iAlt] = initial_temperatures[nInitial_temps - 1];
-
-          else {
-            // Linear interpolation!
-            iA = 0;
-
-            while (alt > initial_altitudes[iA])
-              iA++;
-
-            iA--;
-            // alt will be between iA and iA+1:
-            r = (alt - initial_altitudes[iA]) /
-                (initial_altitudes[iA + 1] - initial_altitudes[iA]);
-            temp1d[iAlt] =
-              (1.0 - r) * initial_temperatures[iA] +
-              (r) * initial_temperatures[iA + 1];
-          }
-        }
-      }
-    } else
-      temp1d = 200.0;
-
-    // spread the 1D temperature across the globe:
-    for (iLon = 0; iLon < nLons; iLon++) {
-      for (iLat = 0; iLat < nLats; iLat++)
-        temperature_scgc.tube(iLon, iLat) = temp1d;
-    }
-
-    // Set the lower boundary condition:
-    for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
-      species[iSpecies].density_scgc.slice(0).
-      fill(species[iSpecies].lower_bc_density);
-    }
-
-    fill_with_hydrostatic(grid, report);
+  for (int i = 0; i < nInitial_temps; i++) {
+    initial_altitudes.push_back(double(temperatures["alt"][i]) * 1000.0);
+    initial_temperatures.push_back(temperatures["temp"][i]);
   }
 
   return iErr;
 }
 
 //----------------------------------------------------------------------
-// Fill With Hydrostatic Solution
+// Fill With Hydrostatic Solution (all species)
 //----------------------------------------------------------------------
 
 void Neutrals::fill_with_hydrostatic(Grid grid, Report report) {
 
   int64_t nAlts = grid.get_nAlts();
-
   for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
 
     // Integrate with hydrostatic equilibrium up:
+    species[iSpecies].scale_height_scgc =
+      cKB * temperature_scgc / (species[iSpecies].mass * grid.gravity_scgc);
+
     for (int iAlt = 1; iAlt < nAlts; iAlt++) {
-      species[iSpecies].scale_height_scgc.slice(iAlt) =
-        cKB * temperature_scgc.slice(iAlt) /
-        (species[iSpecies].mass * grid.gravity_scgc.slice(iAlt));
       species[iSpecies].density_scgc.slice(iAlt) =
         species[iSpecies].density_scgc.slice(iAlt - 1) %
         exp(-grid.dalt_lower_scgc.slice(iAlt) /
             species[iSpecies].scale_height_scgc.slice(iAlt));
-    }
-  }
-
+    } 
+  
+}
   calc_mass_density(report);
 }
 
+
 //----------------------------------------------------------------------
-// set_bcs
+// Fill With Hydrostatic Solution (only one constituent)
 //----------------------------------------------------------------------
 
-void Neutrals::set_bcs(Report &report) {
+void Neutrals::fill_with_hydrostatic(int64_t iSpecies,
+                                     Grid grid, Report report) {
 
-  std::string function = "Neutrals::set_bcs";
-  static int iFunction = -1;
-  report.enter(function, iFunction);
+if (grid.get_IsMagGrid()==0){
+  int64_t nAlts = grid.get_nAlts();
 
-  int64_t nAlts = temperature_scgc.n_slices;
+  species[iSpecies].scale_height_scgc =
+    cKB * temperature_scgc / (species[iSpecies].mass * grid.gravity_scgc);
 
-  // Set the lower boundary condition:
-  for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
-    species[iSpecies].density_scgc.slice(0).
-    fill(species[iSpecies].lower_bc_density);
+  // Integrate with hydrostatic equilibrium up:
+  for (int iAlt = 1; iAlt < nAlts; iAlt++) {
+    species[iSpecies].density_scgc.slice(iAlt) =
+      species[iSpecies].density_scgc.slice(iAlt - 1) %
+      exp(-grid.dalt_lower_scgc.slice(iAlt) /
+          species[iSpecies].scale_height_scgc.slice(iAlt));
   }
-
-  temperature_scgc.slice(nAlts - 2) = temperature_scgc.slice(nAlts - 3);
-  temperature_scgc.slice(nAlts - 1) = temperature_scgc.slice(nAlts - 2);
-
-  report.exit(function);
+  calc_mass_density(report);
+} else {
+  // if this is mgrid call special treatment
+  fill_forMagGrid_with_hydrostatic(iSpecies, grid, report);
 }
+}
+
+// the geographic grid which corresponds to the mgrid is irregular;
+//  cannot use slices:
+
+void Neutrals::fill_forMagGrid_with_hydrostatic(int64_t iSpecies, Grid grid, Report report) {
+
+    int64_t nAlts = grid.get_nAlts();
+    int64_t nLats = grid.get_nLats();
+    int64_t nLons = grid.get_nLons();
+
+    for (int iAlt = 1; iAlt < nAlts; iAlt++) {    
+      for (int iLat = 1; iLat < nLats; iLat++) {
+        for (int iLon = 0; iLon < nLons; iLon++) { 
+    
+        species[iSpecies].density_scgc(iLon, iLat, iAlt)=
+        species[iSpecies].density_scgc(iLon, iLat, iAlt-1) *
+        exp(-grid.dalt_lower_scgc(iLon, iLat, iAlt) /
+        species[iSpecies].scale_height_scgc(iLon, iLat, iAlt));
+          
+          
+        }
+      }
+    }
+      
+        calc_mass_density(report); 
+}
+
+
 
 //----------------------------------------------------------------------
 // return the index of the requested species
@@ -378,50 +283,63 @@ int Neutrals::get_species_id(std::string name, Report &report) {
 //----------------------------------------------------------------------
 
 bool Neutrals::restart_file(std::string dir, bool DoRead) {
+
   std::string filename;
   bool DidWork = true;
-  json description;
+  int64_t iVar;
+  std::string cName;
 
-  // Output Densities
-  for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
-    filename = dir + "/neu_s" + tostr(iSpecies, 2) + "_n.bin";
+  OutputContainer RestartContainer;
+  RestartContainer.set_directory(dir);
+  RestartContainer.set_filename("neutrals_" + cMember + "_" + cGrid);
 
-    if (DidWork)
-      if (DoRead)
-        DidWork = species[iSpecies].density_scgc.load(filename);
-      else {
-        DidWork = species[iSpecies].density_scgc.save(filename);
-        description["density"][species[iSpecies].cName] = filename;
-      }
-  }
-
-  // Output Temperature
-  filename = dir + "/neu_t.bin";
-
-  if (DidWork)
+  try {
     if (DoRead)
-      DidWork = temperature_scgc.load(filename);
+      RestartContainer.read_container_netcdf();
     else {
-      DidWork = temperature_scgc.save(filename);
-      description["temperature"]["bulk"] = filename;
+      RestartContainer.set_version(0.1);
+      RestartContainer.set_time(0.0);
     }
 
-  // Output Velocity
-  for (int iComp = 0; iComp < 3; iComp++) {
-    filename = dir + "/neu_v" + tostr(iComp, 1) + ".bin";
+    for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
+      cName = species[iSpecies].cName;
 
-    if (DidWork)
       if (DoRead)
-        DidWork = velocity_vcgc[iComp].load(filename);
-      else {
-        DidWork = velocity_vcgc[iComp].save(filename);
-        description["vel_comp" + tostr(iComp, 1)]["bulk"] = filename;
-      }
-  }
+        species[iSpecies].density_scgc =
+          RestartContainer.get_element_value(cName);
+      else
+        RestartContainer.store_variable(cName,
+                                        density_unit,
+                                        species[iSpecies].density_scgc);
+    }
 
-  if (!DoRead && DidWork) {
-    filename = dir + "/neutrals.json";
-    DidWork = write_json(filename, description);
+    cName = temperature_name;
+
+    if (DoRead)
+      temperature_scgc = RestartContainer.get_element_value(cName);
+    else
+      RestartContainer.store_variable(cName,
+                                      temperature_unit,
+                                      temperature_scgc);
+
+    for (int iDir = 0; iDir < 3; iDir++) {
+      cName = velocity_name[iDir];
+
+      if (DoRead)
+        velocity_vcgc[iDir] = RestartContainer.get_element_value(cName);
+      else
+        RestartContainer.store_variable(cName,
+                                        velocity_unit,
+                                        velocity_vcgc[iDir]);
+    }
+
+    if (!DoRead) {
+      RestartContainer.write();
+      RestartContainer.clear_variables();
+    }
+  } catch (...) {
+    std::cout << "Error reading in neutral restart file!\n";
+    DidWork = false;
   }
 
   return DidWork;

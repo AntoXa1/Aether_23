@@ -1,0 +1,64 @@
+#include "aether.h"
+
+int Neutrals::initial_conditions_neutrals_dipole_grid(Grid grid,
+                                                    Times time,
+                                                    Indices indices,
+                                                    Inputs input,
+                                                    Report &report) {
+
+    std::string function = "Neutrals::initial_conditions_neutrals_dipole_grid";
+    report.print(2, "set_neutrals_on_dipole_grid:::Using MSIS for Initial Conditions");
+
+    int iErr = 0;
+
+    Msis msis(input);
+
+    try {
+
+        int64_t iLon, iLat, iAlt;
+
+        msis.set_time(time);
+        precision_t f107 = indices.get_f107(time.get_current());
+        precision_t f107a = indices.get_f107a(time.get_current());
+        msis.set_f107(f107, f107a);
+        msis.set_ap(10.0);
+        
+        Inputs::grid_input_struct grid_input = input.get_grid_inputs();
+
+        msis.set_locations(grid.geoLon_scgc,
+                            grid.geoLat_scgc,
+                            grid.geoAlt_scgc);
+
+        for (int iLon = 0; iLon < grid.get_nLons(); iLon++) {
+            for (iLat = 0; iLat < grid.get_nLats(); iLat++) {
+                for (iAlt = 0; iAlt < grid.get_nAlts(); iAlt++) {
+            
+                // 1) take posision (mlon, mlat, malt ) on a magnetic sph. grid
+
+                // 2) convert to dipole grid (mlon, mlat, malt ) -> (p,q, ph )
+
+                // 3) rho(p,q, ph ) = rho (mlon, mlat, malt ) 
+
+                // magP_scgc(iLon, iLat, iAlt) = lshell[iLat];
+                    
+                
+
+
+                }
+            }
+        }
+
+    //     // species[iSpecies].density_scgc.slice(0).
+    //     //    fill(species[iSpecies].lower_bc_density);
+
+
+    //   } else {
+    //     throw (505);    
+    //   }
+    }
+    catch (...) {
+    cout << "MSIS: Access denied- you are not old enough.\n";
+    }
+
+    return iErr;
+}

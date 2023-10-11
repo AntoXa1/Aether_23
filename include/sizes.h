@@ -18,6 +18,7 @@
 
 #define nMagGhosts 2
 
+/*
 #define nMagAlts 60
 #define nMagAltsG nMagGhosts + nMagAlts + nMagGhosts
 #define iMagAltStart_ nMagGhosts // Inclusive!!!
@@ -32,7 +33,7 @@
 #define nMagLatsG nMagGhosts + nMagLats + nMagGhosts
 #define iMagLatStart_ nMagGhosts // Inclusive!!!
 #define iMagLatEnd_ nMagGhosts + nMagLats - 1 // Inclusive!!!
-
+*/
 // This is for character string lengths:
 
 #define nCharsShort 20

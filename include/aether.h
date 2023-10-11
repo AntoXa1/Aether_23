@@ -1,12 +1,20 @@
 // Copyright 2020, the Aether Development Team (see doc/dev_team.md for members)
 // Full license can be found in License.md
 
+#define SHOW(x) std::cout << #x"=" << x << std::endl;
+
 #ifndef INCLUDE_AETHER_H_
 #define INCLUDE_AETHER_H_
 
-// The armadillo library is to allow the use of 3d cubes and other
-// array types, with array math built in. This eliminates loops!
+/// The armadillo library is to allow the use of 3d cubes and other
+/// array types, with array math built in. This eliminates loops!
 #include <armadillo>
+
+/// This is used for timing and the random seed generator:
+#include <chrono>
+
+/// This is for generating random numbers:
+#include <random>
 
 // Types
 // Precision compile-time aliasing
@@ -17,7 +25,6 @@ using precision_t = double;
 /// Precision type compile-time default to float.
 using precision_t = float;
 #endif
-
 
 /// Armadillo type vector (single column) with compile-time precision.
 using arma_vec = arma::Col<precision_t>;
@@ -35,9 +42,6 @@ using json = nlohmann::json;
 
 // This is for manipulating strings
 #include <sstream>
-
-// Aether includes
-#include "earth.h"
 
 // Contains all information about time in the code and wall time:
 #include "times.h"
@@ -70,6 +74,11 @@ using json = nlohmann::json;
 #include "planets.h"
 
 // not done
+#include "cubesphere.h"
+#include "sphere.h"
+#include "quadtree.h"
+
+// not done
 #include "grid.h"
 
 // Contains the neutral states and derived quantities
@@ -92,16 +101,24 @@ using json = nlohmann::json;
 
 #include "euv.h"
 
+// Contains the collision frequency calculation
+#include "collisions.h"
+
 // not done
 #include "calc_euv.h"
 // not done
 #include "chemistry.h"
 
-// not done
+// Reads collision frequency from csv table
 #include "read_collision_file.h"
+
 // not done
 
 #include "output.h"
+
+//not done
+#include "logfile.h"
+
 // not done
 #include "advance.h"
 
@@ -114,5 +131,12 @@ using json = nlohmann::json;
 
 // not done
 #include "calc_grid_derived.h"
+
+// not done
+#include "parallel.h"
+
+// not commented
+#include "external_msis.h"
+
 
 #endif  // INCLUDE_AETHER_H_

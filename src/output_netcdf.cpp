@@ -1,43 +1,54 @@
 // Copyright 2020, the Aether Development Team (see doc/dev_team.md for members)
 // Full license can be found in License.md
 
-#include <netcdf>
+// Added by A. Ridley - Apr. 25, 2023
 
-#include "../include/aether.h"
+#include "aether.h"
+
+#ifdef NETCDF
+
+/* ---------------------------------------------------------------------
+
+   Output and Input methods for netcdf files
+
+ -------------------------------------------------------------------- */
+
+#include <netcdf>
 
 using namespace netCDF;
 using namespace netCDF::exceptions;
 
 //----------------------------------------------------------------------
+// This is at the top so it doesn't have to go in the include file!
 // Output a given variable to the netCDF file.  The netCDF system
 // doesn't work with Armadillo cubes, so we have to transform the cube
 // to a C-array, and then output
 // ----------------------------------------------------------------------
 
-void output_variable_3d(std::vector<size_t> count_start,
-                        std::vector<size_t> count_end,
-                        fcube value,
-                        NcVar variable) {
+void output_netcdf_3d(std::vector<size_t> count_start,
+                      std::vector<size_t> count_end,
+                      arma_cube value,
+                      NcVar variable) {
 
   // Get the size of the cube:
-  
+
   int64_t nX = value.n_rows;
   int64_t nY = value.n_cols;
   int64_t nZ = value.n_slices;
   int64_t iX, iY, iZ, iTotal, index;
 
   iTotal = nX * nY * nZ;
-  
+
   // Create a temporary c-array to use to output the variable
-  
+
   float *tmp_s3gc = static_cast<float*>(malloc(iTotal * sizeof(float)));
 
   // Move the data from the cube to the c-array
-  
+
   for (iX = 0; iX < nX; iX++) {
     for (iY = 0; iY < nY; iY++) {
       for (iZ = 0; iZ < nZ; iZ++) {
-        index = iX*nY*nZ + iY*nZ + iZ;
+        index = iX * nY * nZ + iY * nZ + iZ;
         tmp_s3gc[index] = value(iX, iY, iZ);
       }
     }
@@ -50,205 +61,177 @@ void output_variable_3d(std::vector<size_t> count_start,
   free(tmp_s3gc);
 }
 
-//----------------------------------------------------------------------
-// Output the different file types to netCDF files. 
-//----------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// read contents of a netcdf file into an output container
+// -----------------------------------------------------------------------------
 
-int output(Neutrals neutrals,
-           Ions ions,
-           Grid grid,
-           Times time,
-           Planets planet,
-           Inputs args,
-           Report &report) {
+int OutputContainer::read_container_netcdf() {
 
   int iErr = 0;
+  std::string whole_filename = directory + "/" + filename + ".nc";
+  std::string UNITS = "units";
 
-  int nOutputs = args.get_n_outputs();
+  try {
+    std::cout << "Reading NetCDF file into container : "
+              << whole_filename << "\n";
+    NcFile ncdf_file_in(whole_filename, NcFile::read);
 
-  int64_t nLons = grid.get_nLons();
-  int64_t nLats = grid.get_nLats();
-  int64_t nAlts = grid.get_nAlts();
-  double time_array[1];
+    std::multimap<std::string, NcVar> variables_in_file;
+    std::multimap<std::string, NcVar>::iterator iter;
 
-  std::string function = "output";
-  static int iFunction = -1;
-  report.enter(function, iFunction);
+    // Declare a string to store the variable name.
+    std::string variable_name;
+    std::string variable_unit;
+    // Declare a netCDF variable attribute object.
+    NcVarAtt attribute;
 
-  for (int iOutput = 0; iOutput < nOutputs; iOutput++) {
+    // Declare a vector of netCDF dimension objects.
+    std::vector <NcDim> dimensions;
+    std::string dimension_name;
+    std::vector<int> nPts(3);
 
-    if (time.check_time_gate(args.get_dt_output(iOutput))) {
+    // Assign the variables in the netCDF file to the multimap.
+    variables_in_file = ncdf_file_in.getVars();
 
-      grid.calc_sza(planet, time, report);
-      grid.calc_gse(planet, time, report);
-      grid.calc_mlt(report);
+    // Use the iterator to loop through the multimap.
+    for (iter = variables_in_file.begin();
+         iter != variables_in_file.end(); iter++) {
 
-      std::string time_string;
-      std::string file_name;
-      std::string file_ext = ".nc";
-      std::string UNITS = "units";
-      std::string file_pre;
+      variable_name = iter->first;
 
-      std::string type_output = args.get_type_output(iOutput);
+      if (variable_name.compare("time") != 0) {
 
-      if (type_output == "neutrals") file_pre = "3DNEU";
-      if (type_output == "states") file_pre = "3DALL";
-      if (type_output == "bfield") file_pre = "3DBFI";
+        attribute = iter->second.getAtt("units");
+        attribute.getValues(variable_unit);
+        dimensions = iter->second.getDims();
+        int nDims =  dimensions.size();
+        int iTotal = 1;
 
-      time_string = time.get_YMD_HMS();
-      file_name = file_pre + "_" + time_string + file_ext;
+        // For this specific app, we only want the 3d arrays.
+        if (nDims == 3) {
 
-      // Create the file:
-      report.print(0, "Writing file : " + file_name);
-      NcFile ncdf_file(file_name, NcFile::replace);
+          for (int iDim = 0; iDim < nDims; iDim++) {
+            dimension_name = dimensions[iDim].getName();
+            nPts[iDim] = dimensions[iDim].getSize();
+            iTotal = iTotal * nPts[iDim];
+          }
 
-      // Add dimensions:
-      NcDim lonDim = ncdf_file.addDim("Longitude", nLons);
-      NcDim latDim = ncdf_file.addDim("Latitude", nLats);
-      NcDim altDim = ncdf_file.addDim("Altitude", nAlts);
+          float *variable_array = new float[iTotal];
+          iter->second.getVar(variable_array);
 
-      NcDim timeDim = ncdf_file.addDim("Time", 1);
+          arma_cube value_scgc;
+          value_scgc.set_size(nPts[0], nPts[1], nPts[2]);
+          int64_t index;
 
-      // Define the Coordinate Variables
+          // NetCDF ordering.
+          for (int64_t iX = 0; iX < nPts[0]; iX++) {
+            for (int64_t iY = 0; iY < nPts[1]; iY++) {
+              for (int64_t iZ = 0; iZ < nPts[2]; iZ++) {
+                index = iX * nPts[1] * nPts[2] + iY * nPts[2] + iZ;
+                value_scgc(iX, iY, iZ) = variable_array[index];
+              }
+            }
+          }
 
-      // Define the netCDF variables for the 3D data.
-      // First create a vector of dimensions:
-
-      std::vector<NcDim> dimVector;
-      dimVector.push_back(lonDim);
-      dimVector.push_back(latDim);
-      dimVector.push_back(altDim);
-
-      NcVar timeVar = ncdf_file.addVar("Time", ncDouble, timeDim);
-      NcVar lonVar = ncdf_file.addVar("Longitude", ncFloat, dimVector);
-      NcVar latVar = ncdf_file.addVar("Latitude", ncFloat, dimVector);
-      NcVar altVar = ncdf_file.addVar("Altitude", ncFloat, dimVector);
-
-      timeVar.putAtt(UNITS, "seconds");
-      lonVar.putAtt(UNITS, "radians");
-      latVar.putAtt(UNITS, "radians");
-      altVar.putAtt(UNITS, "meters");
-
-      std::vector<size_t> startp, countp;
-      startp.push_back(0);
-      startp.push_back(0);
-      startp.push_back(0);
-
-      countp.push_back(nLons);
-      countp.push_back(nLats);
-      countp.push_back(nAlts);
-
-      // Output time:
-
-      time_array[0] = time.get_current();
-      timeVar.putVar(time_array);
-
-      // Output longitude, latitude, altitude 3D arrays:
-
-      output_variable_3d(startp, countp, grid.geoLon_scgc, lonVar);
-      output_variable_3d(startp, countp, grid.geoLat_scgc, latVar);
-      output_variable_3d(startp, countp, grid.geoAlt_scgc, altVar);
-
-      // ----------------------------------------------
-      // Neutral Densities and Temperature
-      // ----------------------------------------------
-
-      if (type_output == "neutrals" ||
-          type_output == "states") {
-
-        // Output all species densities:
-        std::vector<NcVar> denVar;
-        for (int iSpecies=0; iSpecies < nSpecies; iSpecies++) {
-          if (report.test_verbose(3))
-            std::cout << "Outputting Var : "
-                      << neutrals.species[iSpecies].cName << "\n";
-          denVar.push_back(ncdf_file.addVar(neutrals.species[iSpecies].cName,
-                                            ncFloat, dimVector));
-          denVar[iSpecies].putAtt(UNITS, neutrals.density_unit);
-          output_variable_3d(startp, countp,
-                             neutrals.species[iSpecies].density_scgc,
-                             denVar[iSpecies]);
+          // Store in the container:
+          store_variable(variable_name, variable_unit, value_scgc);
         }
-
-        // Output bulk temperature:
-        NcVar tempVar = ncdf_file.addVar(neutrals.temperature_name,
-                                         ncFloat, dimVector);
-        tempVar.putAtt(UNITS, neutrals.temperature_unit);
-        output_variable_3d(startp, countp, neutrals.temperature_scgc, tempVar);
-
-        // Output SZA
-        NcVar szaVar = ncdf_file.addVar("Solar Zenith Angle",
-          ncFloat, dimVector);
-        szaVar.putAtt(UNITS, "degrees");
-        output_variable_3d(startp, countp, grid.sza_scgc * cRtoD, szaVar);
-
+      } else {
+        double *time_array = new double[1], t;
+        iter->second.getVar(time_array);
+        t = time_array[0];
+        set_time(t);
       }
+    }
 
-      // ----------------------------------------------
-      // Ion Densities and Ion Temperature and Electron Temperature
-      // ----------------------------------------------
+    ncdf_file_in.close();
+  } catch (...) {
+    std::cout << "Error reading netcdf file : "
+              << whole_filename << "\n";
+    iErr = 1;
+  }
 
-      if (type_output == "ions" ||
-          type_output == "states") {
-
-        // Output all species densities:
-        std::vector<NcVar> ionVar;
-        for (int iSpecies=0; iSpecies < nIons; iSpecies++) {
-          if (report.test_verbose(3))
-            std::cout << "Outputting Var : "
-                      << ions.species[iSpecies].cName << "\n";
-          ionVar.push_back(ncdf_file.addVar(ions.species[iSpecies].cName,
-                                            ncFloat, dimVector));
-          ionVar[iSpecies].putAtt(UNITS, neutrals.density_unit);
-          output_variable_3d(startp, countp,
-                             ions.species[iSpecies].density_scgc,
-                             ionVar[iSpecies]);
-        }
-
-        ionVar.push_back(ncdf_file.addVar("e-", ncFloat, dimVector));
-        ionVar[nIons].putAtt(UNITS, neutrals.density_unit);
-        output_variable_3d(startp, countp, ions.density_scgc, ionVar[nIons]);
-      }
-
-      // ----------------------------------------------
-      // Magnetic field
-      // ----------------------------------------------
-
-      if (type_output == "bfield") {
-        NcVar mLatVar = ncdf_file.addVar("Magnetic Latitude",
-                                         ncFloat, dimVector);
-        mLatVar.putAtt(UNITS, "radians");
-        output_variable_3d(startp, countp, grid.magLat_scgc, mLatVar);
-
-        NcVar mLonVar = ncdf_file.addVar("Magnetic Longitude",
-                                         ncFloat, dimVector);
-        mLonVar.putAtt(UNITS, "radians");
-        output_variable_3d(startp, countp, grid.magLat_scgc, mLonVar);
-
-        NcVar mLTVar = ncdf_file.addVar("Magnetic Local Time",
-                                         ncFloat, dimVector);
-        mLTVar.putAtt(UNITS, "hours");
-        output_variable_3d(startp, countp, grid.magLocalTime_scgc, mLTVar);
-
-        // Output magnetic field components:
-
-        NcVar bxVar = ncdf_file.addVar("Bx", ncFloat, dimVector);
-        bxVar.putAtt(UNITS, "nT");
-        output_variable_3d(startp, countp, grid.bfield_vcgc[0], bxVar);
-
-        NcVar byVar = ncdf_file.addVar("By", ncFloat, dimVector);
-        byVar.putAtt(UNITS, "nT");
-        output_variable_3d(startp, countp, grid.bfield_vcgc[1], bxVar);
-
-        NcVar bzVar = ncdf_file.addVar("Bz", ncFloat, dimVector);
-        bzVar.putAtt(UNITS, "nT");
-        output_variable_3d(startp, countp, grid.bfield_vcgc[2], bxVar);
-      }  // if befield
-
-      ncdf_file.close();
-    }  // if time check
-  }  // for iOutput
-
-  report.exit(function);
   return iErr;
 }
+
+// -----------------------------------------------------------------------------
+// dump the contents of the container out into a binary file
+// -----------------------------------------------------------------------------
+
+int OutputContainer::write_container_netcdf() {
+
+  int iErr = 0;
+  std::string whole_filename = directory + "/" + filename + ".nc";
+  std::string UNITS = "units";
+  std::string LONG_NAME = "long_name";
+
+  try {
+    NcFile ncdf_file(whole_filename, NcFile::replace);
+    // Add dimensions:
+    NcDim xDim = ncdf_file.addDim("x", elements[0].value.n_rows);
+    NcDim yDim = ncdf_file.addDim("y", elements[0].value.n_cols);
+    NcDim zDim = ncdf_file.addDim("z", elements[0].value.n_slices);
+    NcDim tDim = ncdf_file.addDim("time", 1);
+
+    // Define the netCDF variables for the 3D data.
+    // First create a vector of dimensions:
+
+    std::vector<NcDim> dimVector{xDim, yDim, zDim};
+    std::vector<size_t> startp{ 0, 0, 0};
+    std::vector<size_t> countp{elements[0].value.n_rows,
+                               elements[0].value.n_cols,
+                               elements[0].value.n_slices};
+
+    // Output time:
+    NcVar timeVar = ncdf_file.addVar("time", ncDouble, tDim);
+    double time_array[1];
+    time_array[0] = time_int_to_real(itime);
+    timeVar.putVar(time_array);
+
+    // Output all objects in the container:
+    std::vector<NcVar> Var;
+    int64_t nVars = elements.size();
+
+    for (int64_t iVar = 0; iVar < nVars; iVar++) {
+      Var.push_back(ncdf_file.addVar(elements[iVar].cName, ncFloat, dimVector));
+      Var[iVar].putAtt(UNITS, elements[iVar].cUnit);
+
+      if (elements[iVar].cLongName.length() > 0)
+        Var[iVar].putAtt(LONG_NAME, elements[iVar].cLongName);
+
+      output_netcdf_3d(startp, countp, elements[iVar].value, Var[iVar]);
+    }
+
+    ncdf_file.close();
+  } catch (...) {
+    std::cout << "Error writing netcdf container file : "
+              << whole_filename << "\n";
+    iErr = 1;
+  }
+
+  return iErr;
+}
+
+#else
+
+/* ---------------------------------------------------------------------
+
+   These are dummy functions for compiling without netcdf libraries.
+
+ -------------------------------------------------------------------- */
+
+int OutputContainer::read_container_netcdf() {
+  int iErr = 1;
+  std::cout << "read_container_netcdf is not working!\n";
+  return iErr;
+}
+
+
+int OutputContainer::write_container_netcdf() {
+  int iErr = 1;
+  std::cout << "write_container_netcdf is not working!\n";
+  return iErr;
+}
+
+
+#endif

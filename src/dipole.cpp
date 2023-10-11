@@ -7,6 +7,31 @@
 #include "../include/aether.h"
 
 // -----------------------------------------------------------------------------
+// get the l-shell given latitude (in radians) and normalized radius
+// -----------------------------------------------------------------------------
+
+precision_t get_lshell(precision_t lat, precision_t rNorm) {
+  precision_t cosLat = cos(lat);
+  precision_t lshell = rNorm / (cosLat * cosLat);
+  return lshell;
+}
+
+arma_vec get_lat_from_r_and_lshell(arma_vec r, precision_t lshell) {
+  arma_vec cosLat = sqrt(r / lshell);
+  cosLat.clamp(-1.0, 1.0);
+  arma_vec lat = acos(cosLat);
+  return lat;
+}
+
+precision_t get_lat_from_r_and_lshell(precision_t r, precision_t lshell) {
+  precision_t cosLat = sqrt(r / lshell);
+  if (cosLat < -1.0) cosLat = -1.0;
+  if (cosLat > 1.0) cosLat = 1.0;
+  precision_t lat = acos(cosLat);
+  return lat;
+}
+
+// -----------------------------------------------------------------------------
 // Calculate a tilted offset dipole field given the planetary
 // characteristics
 // -----------------------------------------------------------------------------
@@ -14,13 +39,16 @@
 bfield_info_type get_dipole(precision_t lon,
                             precision_t lat,
                             precision_t alt,
+                            bool DoDebug,
                             Planets planet,
                             Inputs input,
                             Report &report) {
 
   std::string function = "dipole";
   static int iFunction = -1;
-  report.enter(function, iFunction);
+
+  if (DoDebug)
+    report.enter(function, iFunction);
 
   bfield_info_type bfield_info;
 
@@ -107,6 +135,8 @@ bfield_info_type get_dipole(precision_t lon,
   bfield_info.lon = mlon;
   bfield_info.lat = mlat;
 
-  report.exit(function);
+  if (DoDebug)
+    report.exit(function);
+
   return bfield_info;
 }

@@ -5,7 +5,7 @@
 #define INCLUDE_REPORT_H_
 
 /**************************************************************
- * \class Report 
+ * \class Report
  *
  * \brief A system for reporting within the program
 
@@ -17,11 +17,12 @@
  *
  * \author Aaron Ridley
  *
- * \date 2021/04/16 
+ * \date 2021/04/16
  **************************************************************/
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include "aether.h"
 
@@ -30,7 +31,7 @@ class Report {
 // -----------------------------------------------------------------------
 // Public functions and variables
 // -----------------------------------------------------------------------
-  
+
 public:
 
   // Functions:
@@ -47,7 +48,7 @@ public:
    user of the code. Some thoughts on levels:
    0 - essentially only report timing information
    1 - report only broadest level of detail
-   2 - report going in and out of functions, and maybe things that are 
+   2 - report going in and out of functions, and maybe things that are
        done once per iteration
    3-4 - Once per iteration types of outputs. More details at higher levels
    5+ - get into grid iterations. Produces a HUGE amount of info.
@@ -60,10 +61,41 @@ public:
   void set_verbose(int input);
 
   /**************************************************************
+   \brief Set which processor does the reporting
+   \param input the processor to do the reporting
+   **/
+  void set_iProc(int input);
+
+  /**************************************************************
+   \brief This sets the default "iVerbose" that is passed in Aether.json
+   \param input the default "iVerbose" value
+   **/
+  void set_DefaultVerbose(int input);
+
+  /**************************************************************
+   \brief This sets the flag to have sub-functions inherit verbose levels
+   \param input the flag to have sub-functions inherit verbose levels
+   **/
+  void set_doInheritVerbose(bool input);
+
+  /**************************************************************
+   \brief This sets the verbose level for the specified function
+   \param input the function name
+   \param iFunctionVerbose verbose level for the specified function
+   **/
+  void set_FunctionVerbose(std::string input, int iFunctionVerbose);
+
+  /**************************************************************
    \brief How deep to go in the timing report at the end of the run
    \param input the timing depth to be set for the code
    **/
   void set_timing_depth(int input);
+
+  /**************************************************************
+   \brief limit the timing report to functions that take long time to run
+   \param input minimum percent of total time to report
+   **/
+  void set_timing_percent(float input);
 
   /**************************************************************
    \brief Print message if iLevel <= verbose level of code
@@ -84,6 +116,34 @@ public:
   int get_verbose();
 
   /**************************************************************
+   \brief Returns the default "iVerbose" passed in Aether.json
+   **/
+  int get_DefaultVerbose();
+
+  /**************************************************************
+   \brief Returns the flag to have sub-functions inherit verbose levels
+   **/
+  bool get_doInheritVerbose();
+
+  /**************************************************************
+   \brief Returns the verbose level for the specified function
+   \param input the name of the function
+   **/
+  int get_FunctionVerbose(std::string input);
+
+  /**************************************************************
+   \brief sends a message to a student about the function name
+   \param isStudent
+   \param cStudentName
+   \param iFunctionNumber
+   \param cFunctionName
+   **/
+  void student_checker_function_name(bool isStudent,
+				     std::string cStudentName,
+				     int iFunctionNumber,
+				     std::string cFunctionName);
+
+  /**************************************************************
    \brief Starts timer and reports when entering a function, if applicable
 
    This is typically placed at the start of a function. This function
@@ -94,9 +154,9 @@ public:
    - Records the name of the function and number of the function for exit.
 
    \param function_name The name of the function that is being entered
-   \param iFunction first time entered, this should be -1 or something, 
-                    then this is altered to be the number of the function. 
-                    when the function is called again, this number saves 
+   \param iFunction first time entered, this should be -1 or something,
+                    then this is altered to be the number of the function.
+                    when the function is called again, this number saves
                     a string compare
    **/
   void enter(std::string function_name, int &iFunction);
@@ -111,7 +171,7 @@ public:
    \brief Loop through all reported functions and report their run times
    **/
   void times();
-  
+
 // -----------------------------------------------------------------------
 // Private functions and variables
 // -----------------------------------------------------------------------
@@ -119,8 +179,18 @@ private:
 
   /// global verbose level of the code
   int iVerbose;
+  /// processor to do the reporting
+  int iProcReport;
+  /// default "iVerbose" that is passed in Aether.json
+  int iDefaultVerbose;
+  /// flag to have sub-functions inherit verbose levels of functions
+  bool doInheritVerbose;
+  /// map to store the verbose levels of the specified functions
+  std::map<std::string, int> map_iFunctionVerbose;
   /// the depth of the reporting for the timing at the end of the simulation
   int iTimingDepth;
+  /// Only report times above the given percentage of the total run time:
+  float TimingPercent;
 
   /// This is the information needed to be stored for each "entry" (when the
   /// enter function is called - typically a function, but could just be a
@@ -141,6 +211,8 @@ private:
     /// This is the function that was called just before this one, so that
     /// if can be "popped" of the queue:
     int iLastEntry;
+    /// This is an int that holds the Verbose level of the function
+    int iFunctionVerbose;
   };
 
   /// A vector of entries to keep track of during the model run
@@ -161,7 +233,7 @@ private:
   int iLevel;
 
   /// Report when leaving a function
-  bool DoReportOnExit = false;
+  bool DoReportOnExit = true;
 };
 
 #endif  // INCLUDE_REPORT_H_
