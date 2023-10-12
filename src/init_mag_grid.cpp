@@ -53,7 +53,6 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
 
   magPhi_scgc = magLon_scgc;
 
-  
   // Latitudes:
   // - Make a 1d vector
   // - copy it into the 3d cube
@@ -358,13 +357,15 @@ std::pair<float,float> Grid::lshell_to_qn_qs(Planets planet, float Lshell, float
       // set initial left, mid, right bounds for bisection search for qS
       ThetaLeft = 0.5*cPI;
       ThetaRight = 179.0*cDtoR;
-      ThetaMid = 0.5*(ThetaRight+ThetaLeft);
+      ThetaMid = 0.5*(ThetaRight+ThetaLeft);      
     }
-      
+    
     // Initial stopping condition stopping condition
     DeltaTheta = abs(ThetaLeft-ThetaRight);
     
-    
+    // SHOW(DeltaTheta)
+    // SHOW(Tolerance); abort();
+
     // start bisection search for qN
     while( DeltaTheta > Tolerance ) {
       

@@ -1,16 +1,20 @@
 // Copyright 2020, the Aether Development Team (see doc/dev_team.md for members)
 // Full license can be found in License.md
 #include <iostream>
+#include <filesystem>
+
 #include "../include/aether.h"
+#include <type_traits>
+
 
 // -----------------------------------------------------------------------------
 // Main file for the Aether model.  This is needed when Aether is not used
 // as a library in another code, such as the SWMF.
 // -----------------------------------------------------------------------------
-// #define SHOW(x) std::cout << #x"=" << x << std::endl;
 
 int main() {
 
+  
   int iErr = 0;
   bool DidWork = true;
   Times time;
@@ -24,6 +28,11 @@ int main() {
 
 
 cout<<"entering : "<< function <<endl;
+// std::filesystem :: path cwd = std::filesystem::current_path();
+
+
+
+// string :: path_to_rundir = ""
 
   // Create inputs (reading the input file):
   Inputs input(time, report);
@@ -49,8 +58,6 @@ cout<<"entering : "<< function <<endl;
        input.get_nLatsGeo(),
        input.get_nAltsGeo(), nGeoGhosts);
 
-
-    
   if (!quadtree.is_ok())
       throw std::string("quadtree initialization failed!");
   gGrid.init_geo_grid(quadtree, planet, input, report);
@@ -61,20 +68,27 @@ cout<<"entering : "<< function <<endl;
 
   SHOW(gGrid.geoX_scgc(1,1,1)) 
   SHOW(gGrid.geoAlt_scgc(1,1,1))
-  // exit(10);
+
 
 
   {
     int iAlt=0; int iLon=0, iLat =0;
     
      for (int i=1; i < gGrid.get_nAlts(); i++)
-         SHOW( gGrid.radius_scgc(iLon,iLat, i) ); 
-  
+         SHOW( gGrid.radius_scgc(iLon,iLat, i) );          
   }
+
+
+
+  
     
   
 
+
+
+
   Neutrals neutrals(gGrid, planet, time, indices, input, report);
+
 
   //------------Initialize Magnetic grid------------------
   SHOW(input.get_nAltsMag())
@@ -90,9 +104,9 @@ cout<<"entering : "<< function <<endl;
   {
     int iAlt=0; int iLon=0, iLat =0;
     for (int i=1; i<mGrid.get_nAlts(); i++){
-    SHOW(mGrid.radius_scgc(iLon,iLat, i) ); 
-    SHOW(mGrid.geoAlt_scgc(iLon,iLat, i) );    
-    SHOW(i);
+      SHOW(mGrid.radius_scgc(iLon,iLat, i) ); 
+      SHOW(mGrid.geoAlt_scgc(iLon,iLat, i) );    
+      SHOW(i);
     }
     // exit(10);
   }
@@ -170,13 +184,13 @@ cout<< " No calc_chemistry "<<endl;
 
 // advance chem
 
-iErr = output(neutrals,
-	      Ions,
-	      gGrid,
-	      time,
-	      planet,
-	      input,
-	      report);
+// iErr = output(neutrals,
+// 	      Ions,
+// 	      gGrid,
+// 	      time,
+// 	      planet,
+// 	      input,
+// 	      report);
 
 // iErr = output(mNeutrals,
 // 	      mIons,

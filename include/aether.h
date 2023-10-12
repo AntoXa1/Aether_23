@@ -1,8 +1,6 @@
 // Copyright 2020, the Aether Development Team (see doc/dev_team.md for members)
 // Full license can be found in License.md
 
-#define SHOW(x) std::cout << #x"=" << x << std::endl;
-
 #ifndef INCLUDE_AETHER_H_
 #define INCLUDE_AETHER_H_
 
@@ -42,6 +40,8 @@ using json = nlohmann::json;
 
 // This is for manipulating strings
 #include <sstream>
+
+#include "magshowtools.h"
 
 // Contains all information about time in the code and wall time:
 #include "times.h"
