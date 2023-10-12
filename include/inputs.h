@@ -62,11 +62,17 @@ public:
     std::string alt_file;
     bool IsUniformAlt;
     precision_t alt_min;
+    precision_t alt_max;
     precision_t dalt;
     precision_t lat_min;
     precision_t lat_max;
     precision_t lon_min;
     precision_t lon_max;
+    // for magnetic fields, need minimum apex:
+    // this needs to be larger than alt_min!
+    precision_t min_apex;
+    // this is for checking if the settings are ok:
+    bool isOk;
   };
 
   //grid_input_struct get_geo_grid_inputs();

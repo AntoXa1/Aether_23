@@ -13,6 +13,7 @@ run.test/
 build/
 run.test/
 run.test_mgrid/
+.vscode/*
 
 # Doxygen generated files
 doc/generated

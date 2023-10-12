@@ -178,7 +178,8 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
         //cout << "i, x " << i << "  " << x[i] << endl;
         //cout << "i, r, theta " << i << "  " << r[i]<<" "<<theta[i] << endl << endl;
         
-        // cout << "iX+ magPhi: " << iX <<" "<< iY << " " << iZ << " " << magPhi_scgc(iX,iY,iZ) << endl;
+        //cout << "iX+ magPhi: " << iX <<" "<< iY << " " << iZ << " " << magPhi_scgc(iX,iY,iZ) << endl;
+        
         // Llr: lat, lon, rad
 
         Llr[0] = magPhi_scgc(iX,iY,iZ);
@@ -206,13 +207,15 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
 
         // if (iX == 5 & iY == 5)
         //   cout << "lon, lat, alt: " << magPhi_scgc(iX,iY,iZ) << " "
-        //   << theta << " " << r << "\n";
+        //   << theta << " " << r 
+        //  << " " << magP_scgc(iX,iY,iZ) 
+        //  << " " << magQ_scgc(iX,iY,iZ) << "\n";
 
         this->geoLon_scgc(iX,iY,iZ) = magPhi_scgc(iX,iY,iZ);
         this->geoLat_scgc(iX,iY,iZ) = theta;
         this->geoAlt_scgc(iX,iY,iZ) = r;
 
-this->geoAlt_scgc(iX,iY,iZ) *= radius0;
+        this->geoAlt_scgc(iX,iY,iZ) *= radius0;
 
 
         // - grid_input.alt_min ?
@@ -607,7 +610,10 @@ void Grid::fill_dipole_q_line(float qN, float qS, float Gamma, int nZ, float Lsh
      transform_llr_to_xyz(Llr, Xyz);
 
      if (DoTestLine==1){
-       gridfile << Xyz[0] <<" "<< Xyz[1] <<" "<< Xyz[2] << endl;
+       gridfile << Xyz[0] <<" " 
+                << Xyz[1] <<" "
+                << Xyz[2] <<" "
+                << Lshell <<  endl;
 
      }
   }
@@ -639,7 +645,7 @@ std::pair<float,float> Grid::p_q_to_r_theta(float p, float q) {
   float Tolerance = 0.00001;
 
   // initial guess for r
-  r = 1.0;
+  r = 100.0;
 
   Func= pow(q,2.0) * pow(r,4.0) + 1.0/p*r-1;
   dFunc= 4.0*pow(q,2.0) * pow(r,3.0) + 1.0/p;
@@ -682,3 +688,162 @@ std::pair<float,float> Grid::p_q_to_r_theta(float p, float q) {
   
   return {r,theta};
 }
+
+arma_vec get_r3_spacing(precision_t lat, precision_t rMin, 
+                        precision_t rMax, int64_t nPts, int64_t nGcs) {
+
+  precision_t rMaxReal = rMax;
+
+  precision_t lShell = get_lshell(lat, rMin);
+  if (lShell < rMaxReal) {
+    rMaxReal = lShell;
+    std::cout << "Limiting rMaxReal from " << rMax << " to " << rMaxReal << "\n";
+  }
+  precision_t rMin3 = pow(rMin, 1.0/3.0);
+  precision_t rMax3 = pow(rMaxReal, 1.0/3.0);
+  precision_t dr3 = (rMax3 - rMin3) / (nPts-nGcs*2);
+  arma_vec r(nPts);
+  for (int64_t iPt = 0; iPt < nPts; iPt++) {
+    r(iPt) = pow(rMin3 + dr3 * (iPt - nGcs), 3);
+  }
+  return r;
+}
+
+// ----------------------------------------------------------------------
+// Initialize the geographic grid.  At the moment, this is a simple
+// Lon/Lat/Alt grid.  The grid structure is general enough that each
+// of the lon, lat, and alt can be a function of the other variables.
+// ----------------------------------------------------------------------
+
+void Grid::init_dipole_grid(Quadtree quadtree, Planets planet, Inputs input, Report &report) {
+  
+  std::string function = "Grid::init_dipole_grid";
+  static int iFunction = -1;
+  report.enter(function, iFunction);
+  
+// turn the switch on! 
+  IsMagGrid = true;
+
+  int64_t iLon, iLat, iAlt;
+
+  // This is just an example:  
+  report.print(3, "Getting mgrid_inputs inputs in dipole grid");
+
+  Inputs::grid_input_struct grid_input = input.get_mgrid_inputs();
+
+  report.print(3, "Setting inputs in dipole grid");
+  precision_t min_apex = grid_input.min_apex;
+  precision_t min_alt = grid_input.alt_min;
+  precision_t max_alt = grid_input.alt_max;
+  precision_t planetRadius = planet.get_radius(0.0);
+  precision_t min_lshell = (min_apex + planetRadius)/planetRadius;
+  precision_t min_r = (min_alt + planetRadius)/planetRadius;
+  precision_t max_r = (max_alt + planetRadius)/planetRadius;
+  precision_t min_lat = get_lat_from_r_and_lshell(min_r, min_lshell);
+  precision_t stretch = (cPI/2 - min_lat) / (cPI/2);
+  report.print(3, "Done setting inputs in dipole grid");
+
+  // Get some coordinates and sizes in normalized coordinates:
+  arma_vec lower_left_norm = quadtree.get_vect("LL");
+  arma_vec size_right_norm = quadtree.get_vect("SR");
+  arma_vec size_up_norm = quadtree.get_vect("SU");
+
+  precision_t dlon = size_right_norm(0) * cPI / (nLons - 2 * nGCs);
+  precision_t lon0 = lower_left_norm(0) * cPI;
+  arma_vec lon1d(nLons);
+
+  // Longitudes:
+  // - Make a 1d vector
+  // - copy it into the 3d cube
+  for (iLon = 0; iLon < nLons; iLon++)
+    lon1d(iLon) = lon0 + (iLon - nGCs + 0.5) * dlon;
+
+  for (iLat = 0; iLat < nLats; iLat++) {
+    for (iAlt = 0; iAlt < nAlts; iAlt++)
+      magLon_scgc.subcube(0, iLat, iAlt, nLons - 1, iLat, iAlt) = lon1d;
+  }
+
+  geoLon_scgc = magLon_scgc;
+
+  precision_t dlat = size_up_norm(1) * cPI / (nLats - 2 * nGCs);
+  precision_t lat0 = lower_left_norm(1) * cPI;
+
+  arma_vec lat1d(nLats);
+
+  // Latitudes:
+  // - Make a 1d vector
+  // - copy it into the 3d cube
+  for (iLat = 0; iLat < nLats; iLat++) {
+    lat1d(iLat) = lat0 + (iLat - nGCs + 0.5) * dlat;
+    std::cout << "Original : " <<  lat1d(iLat) << " ";
+    if (lat1d(iLat) >= 0) {
+      lat1d(iLat) = min_lat + lat1d(iLat) * stretch;
+    } else {
+      lat1d(iLat) = -min_lat + lat1d(iLat) * stretch;
+    }
+    std::cout << "Final : " <<  lat1d(iLat) << "\n";
+
+  }
+  for (iLon = 0; iLon < nLons; iLon++) {
+    for (iAlt = 0; iAlt < nAlts; iAlt++)
+      magLat_scgc.subcube(iLon, 0, iAlt, iLon, nLats - 1, iAlt) = lat1d;
+  }
+
+  arma_vec rNorm1d, lat1dAlong;
+  arma_cube r3d(nLons, nLats, nAlts);
+
+  precision_t lShell;
+
+  for (iLat = 0; iLat < nLats; iLat++) {
+    lat0 = lat1d(iLat);
+    if (lat0 > cPI/2) lat0 = cPI - lat0;
+    if (lat0 < -cPI/2) lat0 = -cPI - lat0;
+    lShell = get_lshell(lat0, min_r);
+    std::cout << "lShell : " << lat0 * cRtoD << " " << lShell << "\n";
+    std::cout << "min_r : " << min_r << " " << max_r << " " << nAlts << " " << nGCs << "\n";
+    rNorm1d = get_r3_spacing(lat0, min_r, max_r, nAlts, nGCs);
+    lat1dAlong = get_lat_from_r_and_lshell(rNorm1d, lShell);
+    if (lat0 < 0)
+      lat1dAlong = -1.0 * lat1dAlong;
+    for (iLon = 0; iLon < nLons; iLon++) {
+      r3d.tube(iLon, iLat) = rNorm1d * planetRadius;
+      magLat_scgc.tube(iLon, iLat) = lat1dAlong;
+    }
+  }
+
+  geoLat_scgc = magLat_scgc;
+  magAlt_scgc = r3d - planetRadius;
+
+  std::vector<arma_cube> llr, xyz, xyzRot1, xyzRot2;
+  llr.push_back(magLon_scgc);
+  llr.push_back(magLat_scgc);
+  llr.push_back(r3d);
+  xyz = transform_llr_to_xyz_3d(llr);
+
+  precision_t magnetic_pole_rotation = planet.get_dipole_rotation();
+  precision_t magnetic_pole_tilt = planet.get_dipole_tilt();
+
+  // Reverse our dipole rotations:
+  xyzRot1 = rotate_around_y_3d(xyz, magnetic_pole_tilt);
+  xyzRot2 = rotate_around_z_3d(xyzRot1, magnetic_pole_rotation);
+
+  // transform back to lon, lat, radius:
+  llr = transform_xyz_to_llr_3d(xyzRot2);
+
+  geoLon_scgc = llr[0];
+  geoLat_scgc = llr[1];
+  geoAlt_scgc = llr[2] - planetRadius;
+
+  std::cout << "magLon : " << magLon_scgc(12,10,5) * cRtoD << " "
+              << magLat_scgc(12,10,5) * cRtoD << " "
+              << magAlt_scgc(12,10,5) / 1000.0 << "\n";
+
+  std::cout << "geoLon : " << geoLon_scgc(12,10,5) * cRtoD << " "
+              << geoLat_scgc(12,10,5) * cRtoD << " "
+              << geoAlt_scgc(12,10,5) / 1000.0 << "\n";
+
+  report.exit(function);
+  return;
+
+}
+

@@ -109,6 +109,8 @@ int Neutrals::initial_conditions(Grid grid,
       // temperature profile in the planet.in file.
       // ---------------------------------------------------------------------
 
+      report.print(2, "Using Planet for Initial Conditions");
+
       int64_t nLons = grid.get_nLons();
       int64_t nLats = grid.get_nLats();
       int64_t nAlts = grid.get_nAlts();
@@ -166,6 +168,7 @@ int Neutrals::initial_conditions(Grid grid,
         fill(species[iSpecies].lower_bc_density);
       }
 
+      report.print(3, "Going into fill_with_hydrostatic");
       fill_with_hydrostatic(grid, report);
 
     } // type = planet

@@ -97,11 +97,15 @@ cout<<"entering : "<< function <<endl;
        input.get_nLatsMag(),
        input.get_nAltsMag(), nMagGhosts);
 
-  mGrid.init_mag_grid(planet, input, report);
+  // Anton's code:
+  //mGrid.init_mag_grid(planet, input, report);
+  // Aaron's code:
+  mGrid.init_dipole_grid(quadtree, planet, input, report);
+  // mGrid.init_mag_grid(planet, input, report);
 
   mGrid.fill_grid(planet, report);
+  mGrid.fill_grid_radius(planet, report);
 
-  {
     int iAlt=0; int iLon=0, iLat =0;
     for (int i=1; i<mGrid.get_nAlts(); i++){
       SHOW(mGrid.radius_scgc(iLon,iLat, i) ); 
@@ -109,7 +113,6 @@ cout<<"entering : "<< function <<endl;
       SHOW(i);
     }
     // exit(10);
-  }
   
 
 
@@ -119,7 +122,6 @@ cout<<"entering : "<< function <<endl;
   // exit(10);
 
   //-----------------------------------------------------  
-
 
   // iterate p,q; convert to r,theta,phi; 
   // p,q, is uniform, while rThPhi is non-uniform
@@ -178,27 +180,27 @@ time.increment_intermediate(dt_couple);
 
  
 
-cout<< " No calc_chemistry "<<endl;
+//cout<< " No calc_chemistry "<<endl;
 
-// m_chemistry.calc_chemistry(m_neutrals, m_ions, time, mGrid, report); 
+m_chemistry.calc_chemistry(mNeutrals, mIons, time, mGrid, report); 
 
 // advance chem
 
-// iErr = output(neutrals,
-// 	      Ions,
-// 	      gGrid,
-// 	      time,
-// 	      planet,
-// 	      input,
-// 	      report);
+//iErr = output(neutrals,
+//	      ions,
+//	      gGrid,
+//	      time,
+//	      planet,
+//	      input,
+//	      report);
 
-// iErr = output(mNeutrals,
-// 	      mIons,
-// 	      mGrid,
-// 	      time,
-// 	      planet,
-// 	      input,
-// 	      report);
+iErr = output(mNeutrals,
+ 	      mIons,
+ 	      mGrid,
+ 	      time,
+ 	      planet,
+ 	      input,
+ 	      report);
  
 cout<<"----------" << "init mGrid.mag_grid is ok"<<endl;
 

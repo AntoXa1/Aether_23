@@ -40,6 +40,11 @@
 	"nBlocksLat" : 1,
 	"nAlts" : 50},
 
+    "MagBlockSize" : {
+	"nLons" : 36,
+	"nLats" : 36,
+	"nAlts" : 50},
+
     "GeoGrid" : {
 	"MinLat" : -90.0,
 	"MaxLat" :  90.0,
@@ -50,6 +55,18 @@
         "AltFile" : "",
 	"IsUniformAlt" : true},
 
+    "MagGrid" : {
+	"MinLat" : -90.0,
+	"MaxLat" :  90.0,
+	"MinLon" :   0.0,
+	"MaxLon" : 360.0,
+	"MinAlt" : 100.0,
+	"MaxAlt" : 2000.0,
+	"MinApex" : 120.0,
+	"dAlt"   : 5.0,
+        "AltFile" : "",
+	"IsUniformAlt" : true},
+    
     "CubeSphere" : {
 	"is" : false},
 
