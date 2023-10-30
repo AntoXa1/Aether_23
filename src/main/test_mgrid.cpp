@@ -98,9 +98,12 @@ cout<<"entering : "<< function <<endl;
        input.get_nAltsMag(), nMagGhosts);
 
   // Anton's code:
-  //mGrid.init_mag_grid(planet, input, report);
+  
+  mGrid.init_mgrid(planet, input, report);
+  
   // Aaron's code:
-  mGrid.init_dipole_grid(quadtree, planet, input, report);
+  // mGrid.init_dipole_grid(quadtree, planet, input, report);
+
   // mGrid.init_mag_grid(planet, input, report);
 
   mGrid.fill_grid(planet, report);

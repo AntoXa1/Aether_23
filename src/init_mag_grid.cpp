@@ -6,11 +6,63 @@
 
 #include "../include/aether.h"
 
+
+// class DipoleLine{
+// public:
+//     DipoleLine() : numElem_(1), xx_(1), zz_(1), qq_i_(1), rr_i_(1), tPower_(1.0) {}
+
+//     int getNumElem() const { return numElem_; }
+//     void setNumElem(int numElem) { numElem_ = numElem; }
+
+//     const std::vector<double>& getXx() const { return xx_; }
+//     void setXx(const std::vector<double>& xx) { xx_ = xx; }
+
+//     const std::vector<double>& getZz() const { return zz_; }
+//     void setZz(const std::vector<double>& zz) { zz_ = zz; }
+
+//     const std::vector<double>& getQq_i() const { return qq_i_; }
+//     void setQq_i(const std::vector<double>& qq_i) { qq_i_ = qq_i; }
+
+//     const std::vector<double>& getRr_i() const { return rr_i_; }
+//     void setRr_i(const std::vector<double>& rr_i) { rr_i_ = rr_i; }
+
+//     double getTPower() const { return tPower_; }
+
+// private:
+//     int numElem_;
+//     std::vector<double> xx_;
+//     std::vector<double> zz_;
+//     std::vector<double> qq_i_;
+//     std::vector<double> rr_i_;
+//     double tPower_;
+// };
+
+
+void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
+  std::string function = "Grid::init_mgrid";
+  static int iFunction = -1;
+  report.enter(function, iFunction);
+  
+// turn the switch on! 
+  this->set_IsMagGrid(1);
+
+  // DipoleLine mLine;
+
+  // SHOW mLine
+  // exit(10);
+
+}
+
+
+
 // ----------------------------------------------------------------------
 // Initialize the geographic grid.  At the moment, this is a simple
 // Lon/Lat/Alt grid.  The grid structure is general enough that each
 // of the lon, lat, and alt can be a function of the other variables.
 // ----------------------------------------------------------------------
+
+
+
 
 void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   
