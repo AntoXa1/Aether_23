@@ -12,6 +12,18 @@
 // as a library in another code, such as the SWMF.
 // -----------------------------------------------------------------------------
 
+DipoleLine::DipoleLine(int numElemIn,int tPow){
+  numElem=numElemIn;
+  std::vector<double> xx(numElem);
+  std::vector<double> zz(numElem);
+  std::vector<double> qq(numElem);
+  std::vector<double> rr(numElem);
+  std::vector<double> tt(numElem);
+  
+  tPower =tPow;
+}
+
+
 int main() {
 
   
@@ -78,21 +90,16 @@ cout<<"entering : "<< function <<endl;
          SHOW( gGrid.radius_scgc(iLon,iLat, i) );          
   }
 
-
-
-  
-    
-  
-
-
-
-
   Neutrals neutrals(gGrid, planet, time, indices, input, report);
 
 
   //------------Initialize Magnetic grid------------------
   SHOW(input.get_nAltsMag())
   
+  int  Nq =10;
+  int tPower =1;
+  DipoleLine mLine(Nq,tPower);
+
   Grid mGrid(input.get_nLonsMag(),
        input.get_nLatsMag(),
        input.get_nAltsMag(), nMagGhosts);

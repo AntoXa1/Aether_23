@@ -319,6 +319,7 @@ public:
   void convert_dipole_geo_xyz(Planets planet, float XyzDipole[3], float XyzGeo[3]);
   std::pair<float,float> p_q_to_r_theta(float p, float q);
   
+
 };
 
 #endif  // INCLUDE_GRID_H_

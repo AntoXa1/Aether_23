@@ -80,3 +80,19 @@ void PrintToFileAndExecCompanionPlotScript(T x, const std::string& name) {
 }
 
 
+class DipoleLine{
+public:
+  int numElem;
+  
+  DipoleLine(int numElemIn,int tPow); 
+
+// friend class Grid;
+
+  std::vector<double> xx;
+  std::vector<double> zz;
+  std::vector<double> qq;
+  std::vector<double> rr;
+  double tPower;
+
+};
+
