@@ -23,6 +23,10 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
   DipoleLine mLine(Nq,tPower);
   
   SHOW(mLine.numElem)
+  SHOW(mLine.xx.size())
+
+  for (auto t: mLine.tt) {cout << t<<"\n";}
+
   exit(10);
 
 }

@@ -92,6 +92,7 @@ public:
   std::vector<double> zz;
   std::vector<double> qq;
   std::vector<double> rr;
+  std::vector<double> tt;
   double tPower;
 
 };

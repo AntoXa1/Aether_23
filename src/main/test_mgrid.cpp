@@ -12,17 +12,12 @@
 // as a library in another code, such as the SWMF.
 // -----------------------------------------------------------------------------
 
-DipoleLine::DipoleLine(int numElemIn,int tPow){
-  numElem=numElemIn;
-  std::vector<double> xx(numElem);
-  std::vector<double> zz(numElem);
-  std::vector<double> qq(numElem);
-  std::vector<double> rr(numElem);
-  std::vector<double> tt(numElem);
-  
-  tPower =tPow;
-}
 
+DipoleLine::DipoleLine(int numElemIn,int tPow):tPower(tPow),numElem(numElemIn), 
+                        xx(numElemIn),zz(numElemIn),qq(numElemIn),
+                        rr(numElemIn),tt(numElemIn){
+          tt = linspace(0.0, 1.0, numElem);
+};
 
 int main() {
 
