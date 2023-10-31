@@ -6,6 +6,7 @@
 #include "../include/aether.h"
 #include <type_traits>
 
+// (cd ../ && make clean && make -j)
 
 // -----------------------------------------------------------------------------
 // Main file for the Aether model.  This is needed when Aether is not used
