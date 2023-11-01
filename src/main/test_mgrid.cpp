@@ -13,12 +13,31 @@
 // as a library in another code, such as the SWMF.
 // -----------------------------------------------------------------------------
 
+class DipoleLine{
+public:
+  int numElem;
+  
+  DipoleLine(int numElemIn,int tPow); 
+
+// friend class Grid;
+
+  std::vector<double> xx;
+  std::vector<double> zz;
+  std::vector<double> qq;
+  std::vector<double> rr;
+  std::vector<double> tt;
+  double tPower;
+
+};
 
 DipoleLine::DipoleLine(int numElemIn,int tPow):tPower(tPow),numElem(numElemIn), 
                         xx(numElemIn),zz(numElemIn),qq(numElemIn),
                         rr(numElemIn),tt(numElemIn){
           tt = linspace(0.0, 1.0, numElem);
 };
+
+
+
 
 int main() {
 
@@ -39,9 +58,7 @@ cout<<"entering : "<< function <<endl;
 // std::filesystem :: path cwd = std::filesystem::current_path();
 
 
-
 // string :: path_to_rundir = ""
-
   // Create inputs (reading the input file):
   Inputs input(time, report);
 

@@ -6,6 +6,20 @@
 
 #include "../include/aether.h"
 
+double  quartFun(double r, double  pMag, double q) { 
+  return (pow(q,2)*pow(r,4) + r/pMag -1.0);  };
+
+double  dQuartFunDr(double r, double  pMag, double q) { 
+  return (4*pow(q,2)*pow(r,3) + 1/pMag);  };
+
+void rootOfQuarticEqu(double& res, double r, double  pMag, double q  ){
+  
+  int maxIter = 10;
+
+  for(int i=1; i<=maxIter;++i){
+    double y = quartFun(r,pMag,q);
+  }
+}
 
 
 void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
@@ -13,21 +27,100 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
   static int iFunction = -1;
   report.enter(function, iFunction);
   
-  SHOW(function)
+  
+  int Nq =10,
+  tPower =1,
+  nPhi = 1,
+  N_mLines = 2; //nFootPntsPerLon = N_mLines
+
+  std::vector<double> tt; //parameter along the B-line
+  std::vector<double> th_ = linspace(0.0, 1.0, N_mLines);
+    
+  fvec LinesPfoot(N_mLines);
+  fvec LinesThetaFoot(N_mLines);
+
+  arma_cube LinesQq(nPhi, N_mLines, Nq);
+  arma_cube LinesXx(nPhi, N_mLines, Nq);
+  arma_cube LinesYy(nPhi, N_mLines, Nq);
+  arma_cube LinesZz(nPhi, N_mLines, Nq);
+    
+  tt = linspace(0.0, 1.0, Nq);
+  // th_
+  
+  // LinesThetaFoot(N_mLines) = linspace(0.0, 1.0, N_mLines);
+
+  int j_phi;
+  double qs,ps,qe;
+
+  j_phi = 1;
+  
+  // qs = line.zz[1];
+  // ps = 1/(line.xx[1]^2);
+  // qe=0.0 ;
+
+  for (auto t: tt) {cout << t<<"\n";}
+
+  // θLat = Nθ>1 ? LinRange(θs,θe,Nθ) : θs
+
+  exit(10);
 
 // turn the switch on! 
   this->set_IsMagGrid(1);
   
-  int  Nq =10;
-  int tPower =1;
-  DipoleLine mLine(Nq,tPower);
   
-  SHOW(mLine.numElem)
-  SHOW(mLine.xx.size())
+{
 
-  for (auto t: mLine.tt) {cout << t<<"\n";}
+  
 
-  exit(10);
+cout<<magPhi_scgc.n_rows<<"\n"<<magPhi_scgc.n_cols<<"\n"<<magPhi_scgc.n_slices<<"\n";
+
+}
+  // DipoleLine mLine;
+
+  // DipoleLine *Lines ;
+  // Line[0] = new DipoleLine[10];
+  
+  // Lines[0] = new DipoleLine(Nq,tPower);
+  
+  // SHOW(Lines[0].numElem)
+
+  // [1](Nq,tPower);
+
+  // [N_mLines];
+
+//  for(int i=0; i<N_mLines;i++){
+//   Lines[i] = DipoleLine(Nq,tPower);
+//  }
+
+  // cout<< Lines[0].numElem <<endl;
+
+  //  = {mLine(Nq,tPower)};
+
+
+  
+  double res = -1.0;
+  
+  // for(int i=0; i<N_mLines;i++){
+    // double y = quartFun(r,pMag,q);
+  // }
+
+  // for (auto line: Lines){ 
+  //   line = new DipoleLine(Nq,tPower);
+  // }
+
+
+
+  // rootOfQuarticEqu(res, r,  pMag, q  ){
+
+  // for(auto line: Lines){
+  //   SHOW(line.numElem)
+  //   SHOW(line.xx.size())
+  // }
+
+
+  // for (auto t: Lines[1].tt) {cout << t<<"\n";}
+
+  // exit(10);
 
 }
 
@@ -86,11 +179,8 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   // Latitudes:
   // - Make a 1d vector
   // - copy it into the 3d cube
-  fvec lat1d(nLats);
   
-  //cout << "!!!!!!!!!!! HA1a "<<endl;
-
-
+  fvec lat1d(nLats);
   fvec lshell(nLats);
 
   float dlat = (grid_input.lat_max - grid_input.lat_min) / (nLats-2*nGCs);
