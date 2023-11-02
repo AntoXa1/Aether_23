@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 
+
 #include "../include/aether.h"
 
 double  quartFun(double r, double  pMag, double q) { 
@@ -27,38 +28,90 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
   static int iFunction = -1;
   report.enter(function, iFunction);
   
+  double th_startDeg= 0.1;
+  double th_endDeg =  179;
+
+  double cPI = 3.141592653589793238;
+  const double deg2rad = cPI/180.0;
+
+  double th_s = deg2rad*th_startDeg;
+  double th_e = deg2rad*th_endDeg;
   
   int Nq =10,
   tPower =1,
   nPhi = 1,
   N_mLines = 2; //nFootPntsPerLon = N_mLines
 
-  std::vector<double> tt; //parameter along the B-line
-  std::vector<double> th_ = linspace(0.0, 1.0, N_mLines);
-    
+  std::vector<double> t01; //parameter along the B-line
+  std::vector<double> th_; //theta of b-field foot for a meridional cross-section 
+  std::vector<double> ph_; 
+
   fvec LinesPfoot(N_mLines);
   fvec LinesThetaFoot(N_mLines);
-
+  // fvec ph_(nPhi); 
+  
   arma_cube LinesQq(nPhi, N_mLines, Nq);
   arma_cube LinesXx(nPhi, N_mLines, Nq);
   arma_cube LinesYy(nPhi, N_mLines, Nq);
   arma_cube LinesZz(nPhi, N_mLines, Nq);
-    
-  tt = linspace(0.0, 1.0, Nq);
-  // th_
+  arma_cube LinesRr(nPhi, N_mLines, Nq);
   
-  // LinesThetaFoot(N_mLines) = linspace(0.0, 1.0, N_mLines);
-
-  int j_phi;
-  double qs,ps,qe;
-
-  j_phi = 1;
+  t01 = linspace(0.0, 1.0, Nq);
+  ph_ = linspace(0.0, cPI, nPhi); //longitude coordinate ϕϕ = [0..π]
   
+  fvec qqS(N_mLines,fill::zeros);  //q, p of the foot point
+  fvec ppS(N_mLines,fill::zeros); 
+  fvec xS(N_mLines,fill::zeros);  //positions of the foot points
+  fvec zS(N_mLines,fill::zeros);
+  
+  if(N_mLines>1){
+  th_ = linspace(th_s,th_e, N_mLines);
+  } else if (N_mLines==1) 
+  {th_[0]=th_s;}
+
+  double qs,qe,ps,th_i,ph_j,q_i;
+
+  for (int j_ph=0; j_ph<nPhi; j_ph++){
+        ph_j = ph_[j_ph];
+
+        for (int l=0; l<N_mLines; l++){         
+         // get the base of lines for a merid plane
+         th_i = th_[l];
+         LinesXx(j_ph,l,0) = xS[l]=sin(th_i)*cos(ph_j); 
+         LinesZz(j_ph,l,0) = zS[l]=cos(th_i);          
+        }
+        
+        qs = LinesZz(j_ph,l,0)//for R=1;
+        ps = 1/pow(LinesXx(j_ph,l,0),2);
+        qe = 0.;
+
+        LinesRr(j_ph,l,0) = 1.0;
+        LinesQq(j_ph,l,0) = LinesZz(j_ph,l,0);
+        ps= 1/pow(LinesXx(j_ph,l,0),2);
+
+        LinesXx(j_ph,l,0) = sqrt(1.0/ps)*cos(ph_j);
+        LinesZz(j_ph,l,0) = LinesQq(j_ph,l,0);
+
+        for (int i_q=0; i_q<Nq ){
+            
+            LinesQq(j_ph,l,i_q) = q_i = line.qq_i[1] + t01[i]^line.tPower * (qe-line.qq_i[1])  
+
+            r_i=line.rr_i[i]=find_zero( (r)->quartFun(r,ps,line.qq_i[i]), r_i)
+            
+            LinesXx(j_ph,l,i_q) = (r_i^3/ps)^0.5*cos(ϕ_j)
+            LinesZz(j_ph,l,i_q) = r_i^3*q_i  
+        }              
+        
+
+
+  }
+  
+
   // qs = line.zz[1];
   // ps = 1/(line.xx[1]^2);
   // qe=0.0 ;
 
-  for (auto t: tt) {cout << t<<"\n";}
+  for (auto t: t01) {cout << t<<"\n";}
 
   // θLat = Nθ>1 ? LinRange(θs,θe,Nθ) : θs
 
@@ -76,6 +129,8 @@ cout<<magPhi_scgc.n_rows<<"\n"<<magPhi_scgc.n_cols<<"\n"<<magPhi_scgc.n_slices<<
 
 }
   // DipoleLine mLine;
+
+// for (auto t: th_) {cout <<"t="<< t<<"\n";}; exit(10);
 
   // DipoleLine *Lines ;
   // Line[0] = new DipoleLine[10];
