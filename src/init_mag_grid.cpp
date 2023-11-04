@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <fstream>
-
+#include <cmath>
 
 #include "../include/aether.h"
 
@@ -21,7 +21,29 @@ void rootOfQuarticEqu(double& res, double r, double  pMag, double q  ){
     double y = quartFun(r,pMag,q);
   }
 }
+void find_zero(double &r, double pDip, double qDip){
+  double x0 = r;
+  
+  double x = quartFun(r,pDip,qDip);
+  double max_iterations =10, df,x1,
+         tol = 1e-3;
+    
+  
+  for(int i=1;i<max_iterations;i++){
+    df = dQuartFunDr(x0,pDip,qDip);
+    x1 = x0 - y0/df;
+    
+    if(abs(x1 - x0)<=tol){
+        return x1; }
+        
+    x0=x1;
+  }
+  if(i==max_iterations){
+    
+  }
 
+
+}
 
 void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
   std::string function = "Grid::init_mgrid";
@@ -69,39 +91,42 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
   } else if (N_mLines==1) 
   {th_[0]=th_s;}
 
-  double qs,qe,ps,th_i,ph_j,q_i;
+  double qs,qe,ps,th_i,ph_j,q_i,r_i;
 
   for (int j_ph=0; j_ph<nPhi; j_ph++){
         ph_j = ph_[j_ph];
 
-        for (int l=0; l<N_mLines; l++){         
+        for (int l1=0; l1<N_mLines; l1++){         
          // get the base of lines for a merid plane
-         th_i = th_[l];
-         LinesXx(j_ph,l,0) = xS[l]=sin(th_i)*cos(ph_j); 
-         LinesZz(j_ph,l,0) = zS[l]=cos(th_i);          
+         th_i = th_[l1];
+         LinesXx(j_ph,l1,0) = xS[l1]=sin(th_i)*cos(ph_j); 
+         LinesZz(j_ph,l1,0) = zS[l1]=cos(th_i);          
         }
+        for (int l=0; l<N_mLines; l++){
         
-        qs = LinesZz(j_ph,l,0)//for R=1;
-        ps = 1/pow(LinesXx(j_ph,l,0),2);
-        qe = 0.;
+          qs = LinesZz(j_ph,l,0); //for R=1;
+          ps = 1/pow(LinesXx(j_ph,l,0),2);
+          qe = 0.;
 
-        LinesRr(j_ph,l,0) = 1.0;
-        LinesQq(j_ph,l,0) = LinesZz(j_ph,l,0);
-        ps= 1/pow(LinesXx(j_ph,l,0),2);
+          LinesRr(j_ph,l,0) = 1.0;
+          LinesQq(j_ph,l,0) = LinesZz(j_ph,l,0);
+          ps= 1/pow(LinesXx(j_ph,l,0),2);
 
-        LinesXx(j_ph,l,0) = sqrt(1.0/ps)*cos(ph_j);
-        LinesZz(j_ph,l,0) = LinesQq(j_ph,l,0);
+          LinesXx(j_ph,l,0) = sqrt(1.0/ps)*cos(ph_j);
+          LinesZz(j_ph,l,0) = LinesQq(j_ph,l,0);
 
-        for (int i_q=0; i_q<Nq ){
+        for (int i_q=0; i_q<Nq; i_q++){
             
-            LinesQq(j_ph,l,i_q) = q_i = line.qq_i[1] + t01[i]^line.tPower * (qe-line.qq_i[1])  
+            LinesQq(j_ph, l, i_q) = q_i = qs + pow(t01[i_q],tPower) * (qe-qs);  
 
-            r_i=line.rr_i[i]=find_zero( (r)->quartFun(r,ps,line.qq_i[i]), r_i)
-            
-            LinesXx(j_ph,l,i_q) = (r_i^3/ps)^0.5*cos(ϕ_j)
-            LinesZz(j_ph,l,i_q) = r_i^3*q_i  
+            r_i = LinesRr(j_ph, l, i_q); // =find_zero( (r)->quartFun(r,ps,line.qq_i[i]), r_i)
+                                  
+            LinesXx(j_ph,l,i_q) = sqrt(pow(r_i,3)/ps)*cos(ph_j);
+
+            LinesZz(j_ph,l,i_q) = pow(r_i,3)*q_i;
         }              
         
+        }
 
 
   }
