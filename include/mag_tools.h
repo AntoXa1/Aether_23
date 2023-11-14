@@ -7,6 +7,7 @@
 
 #define PLOT(v) PrintToFileAndExecCompanionPlotScript(v, #v);
 
+#define SPLOT(x,y,n) PrintToFileAndExecCompanionScatterPlotScript(x,y,n);
 
 #include <vector>
 
@@ -79,6 +80,27 @@ void PrintToFileAndExecCompanionPlotScript(T x, const std::string& name) {
 
 }
 
+template <typename T>
+void PrintToFileAndExecCompanionScatterPlotScript(T x, T y, int len) { 
+  //pring two columns of the length, len
+  std::string cwd = "/Users/dorodnitsyn/WORK/PROJECTS/Aether_pub/Aether/run.test_mgrid";
+  auto fileName = cwd + "/" + "_data.dat";   
+  SHOW(fileName)
+
+    SHOW(len)
+
+    std::ofstream output_file(fileName);
+
+    for (int i = 0; i < len; i++) {        
+          output_file << x[i] <<"\t"<< y[i]<< std::endl;           
+    }
+    output_file.close();
+
+  const std::string pyFileToExecute = cwd + "/" + "./_myscat.py";
+  SHOW(pyFileToExecute)
+  
+  system(pyFileToExecute.c_str());
+}
 
 // class DipoleLine{
 // public:

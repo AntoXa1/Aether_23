@@ -7,42 +7,92 @@
 
 #include "../include/aether.h"
 
-double  quartFun(double r, double  pMag, double q) { 
-  return (pow(q,2)*pow(r,4) + r/pMag -1.0);  };
-
-double  dQuartFunDr(double r, double  pMag, double q) { 
-  return (4*pow(q,2)*pow(r,3) + 1/pMag);  };
-
-void rootOfQuarticEqu(double& res, double r, double  pMag, double q  ){
-  
-  int maxIter = 10;
-
-  for(int i=1; i<=maxIter;++i){
-    double y = quartFun(r,pMag,q);
-  }
+void quartFunAndDeriv(double &f, double &dfdx, double rt, double  pMag, double q) { 
+  double r=rt;
+  f = pow(q,2)*pow(r,4) + r/pMag -1.0;
+  dfdx = 4*pow(q,2)*pow(r,3) + 1/pMag;
+  return ;
 }
-void find_zero(double &r, double pDip, double qDip){
-  double x0 = r;
-  
-  double x = quartFun(r,pDip,qDip);
-  double max_iterations =10, df,x1,
-         tol = 1e-3;
-    
-  
-  for(int i=1;i<max_iterations;i++){
-    df = dQuartFunDr(x0,pDip,qDip);
-    x1 = x0 - y0/df;
-    
-    if(abs(x1 - x0)<=tol){
-        return x1; }
+
+void find_mag_root(double &xRt, double pMag, double qMag){
+
+  double maxit =100, f,df,dx, dxold,x1,x2,xl,xh,fl,fh,dxL,dxH,dxN,tmp1,
+         tolRt_ = 1e-3,
+         tol_ = 1e-3;
         
-    x0=x1;
-  }
-  if(i==max_iterations){
+  x1=1.; //x low
+  x2=1.; //x high
+
+  int maxExpandTrials=40;
+
+quartFunAndDeriv(fl,df, x1,pMag,qMag);
+
+  for (int i =0; i<=maxExpandTrials; i++){ //correct the f+/- interval
+      quartFunAndDeriv(fh,df,x2,pMag,qMag);
+      // SHOW(x1);SHOW(x2);SHOW(fl);SHOW(fh); 
+      if (fabs(fl) <= tol_){xRt=x1; return;};
+      if (fabs(fh) <= tol_){xRt=x2; return;};
+  
+      if ((fl > 0.0 && fh > 0.0) || (fl < 0.0 && fh < 0.0)){      
+        cout<<i<<":  Root must be bracketed in find_mag_root=  "<<fl<<"  "<<fh<<endl;
+        x2*=1.3;            
+      } else {
+        break;
+      }
     
   }
+  if ((fl > 0.0 && fh > 0.0) || (fl < 0.0 && fh < 0.0))
+      throw std::runtime_error("Root must be bracketed in find_mag_root");
 
+  if (fl < 0.0){
+      xl=x1;
+      xh=x2;
+  } else {
+    xh=x1; //flip them!
+    xl=x2; 
+  }
+  xRt=0.5*(x1+x2);   //guess
+  dxold=fabs(x2-x1); //step
+  dx=dxold;
 
+  quartFunAndDeriv(f,df,xRt,pMag,qMag);
+
+  for(int i=1; i<=maxit; i++){
+        
+    dxL = (xRt - xl)*df-f;
+    dxH = (xRt - xh)*df-f; //for out-of-range check
+    dxN = fabs(f);
+
+    if ((dxL*dxH>0) || fabs(2*dxN > df*dxold)){
+      // out of range or not decreasing fast enough
+      dx=0.5*(xh-xl);
+      xRt = xl+dx;
+      if (fabs(xl-xRt) <tol_){return;}
+    } else { //NR step
+      dxold=dx;      
+      dx=f/df;
+      tmp1=xRt;
+      xRt = xRt - dx;
+      if( fabs(tmp1-xRt) <tol_){return;} //root's not changing
+
+    }
+    if (fabs(dx) < tolRt_) return; //converging
+    
+    quartFunAndDeriv(f,df,xRt,pMag,qMag);
+    
+    if (f < 0.0){
+      xl=xRt;
+      }
+    else {
+      xh=xRt;
+    }
+    if(i==maxit){
+        throw std::runtime_error("max_iterations reached in 'find_mag_root' ");  
+    }
+  }
+  // SHOW("find_mag_root");SHOW(x0);SHOW(pMag);SHOW(qMag);SHOW(x1);SHOW(df);SHOW(y0);
+  // SHOW("find_mag_root result:"); SHOW(r);SHOW(i);
+  
 }
 
 void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
@@ -50,8 +100,8 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
   static int iFunction = -1;
   report.enter(function, iFunction);
   
-  double th_startDeg= 0.1;
-  double th_endDeg =  179;
+  double th_startDeg= 30;
+  double th_endDeg =  180.0 - th_startDeg;
 
   double cPI = 3.141592653589793238;
   const double deg2rad = cPI/180.0;
@@ -61,8 +111,8 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
   
   int Nq =10,
   tPower =1,
-  nPhi = 1,
-  N_mLines = 2; //nFootPntsPerLon = N_mLines
+  nPhi = 2,
+  N_mLines = 40; //nFootPntsPerLon = N_mLines
 
   std::vector<double> t01; //parameter along the B-line
   std::vector<double> th_; //theta of b-field foot for a meridional cross-section 
@@ -85,48 +135,68 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
   fvec ppS(N_mLines,fill::zeros); 
   fvec xS(N_mLines,fill::zeros);  //positions of the foot points
   fvec zS(N_mLines,fill::zeros);
-  
-  if(N_mLines>1){
+
   th_ = linspace(th_s,th_e, N_mLines);
-  } else if (N_mLines==1) 
-  {th_[0]=th_s;}
+
+  // SPLOT(t01,t01,Nq)
+
+  // if(N_mLines>1){
+  // th_ = linspace(th_s,th_e, N_mLines);
+  // } 
+  // th_ = linspace(th_s,th_e, N_mLines);
+  // SHOW(th_[0]); exit(10);
+
+  // else if (N_mLines==1) 
+  // {th_[0]=th_s;}
 
   double qs,qe,ps,th_i,ph_j,q_i,r_i;
 
-  for (int j_ph=0; j_ph<nPhi; j_ph++){
+
+
+  for (int j_ph=1; j_ph<nPhi; j_ph++){
         ph_j = ph_[j_ph];
 
-        for (int l1=0; l1<N_mLines; l1++){         
+        for (int i_line=0; i_line<N_mLines; i_line++){         
          // get the base of lines for a merid plane
-         th_i = th_[l1];
-         LinesXx(j_ph,l1,0) = xS[l1]=sin(th_i)*cos(ph_j); 
-         LinesZz(j_ph,l1,0) = zS[l1]=cos(th_i);          
+         th_i = th_[i_line];
+         LinesXx(j_ph,i_line,0) = xS[i_line]=sin(th_i)*cos(ph_j); 
+         LinesZz(j_ph,i_line,0) = zS[i_line]=cos(th_i);          
+        //  SHOW(ph_j); SHOW(th_i ); SHOW(zS[i_line]); SHOW(xS[i_line]);
         }
-        for (int l=0; l<N_mLines; l++){
+
+// SPLOT(xS,zS,N_mLines)
+
+        for (int l=0; l < N_mLines; l++){
         
           qs = LinesZz(j_ph,l,0); //for R=1;
           ps = 1/pow(LinesXx(j_ph,l,0),2);
           qe = 0.;
 
           LinesRr(j_ph,l,0) = 1.0;
-          LinesQq(j_ph,l,0) = LinesZz(j_ph,l,0);
-          ps= 1/pow(LinesXx(j_ph,l,0),2);
+          LinesQq(j_ph,l,0) = LinesZz(j_ph,l,0);                    
 
           LinesXx(j_ph,l,0) = sqrt(1.0/ps)*cos(ph_j);
           LinesZz(j_ph,l,0) = LinesQq(j_ph,l,0);
+        
+        r_i =0.9; //start from the given radius
 
         for (int i_q=0; i_q<Nq; i_q++){
             
             LinesQq(j_ph, l, i_q) = q_i = qs + pow(t01[i_q],tPower) * (qe-qs);  
-
-            r_i = LinesRr(j_ph, l, i_q); // =find_zero( (r)->quartFun(r,ps,line.qq_i[i]), r_i)
-                                  
-            LinesXx(j_ph,l,i_q) = sqrt(pow(r_i,3)/ps)*cos(ph_j);
-
-            LinesZz(j_ph,l,i_q) = pow(r_i,3)*q_i;
-        }              
         
-        }
+            find_mag_root(r_i, ps, q_i);
+
+            LinesRr(j_ph, l, i_q)=r_i;                      
+            LinesXx(j_ph,l,i_q) = sqrt(pow(r_i,3)/ps)*cos(ph_j);
+            LinesZz(j_ph,l,i_q) = pow(r_i,3)*q_i;
+
+            // SHOW(r_i);SHOW(i_q);SHOW(LinesZz(j_ph,l,i_q));
+        }  //for i_q over a line            
+        
+SPLOT(LinesXx.tube(j_ph, l),LinesZz.tube(j_ph, l),Nq)
+        
+
+        }//for over separate lines
 
 
   }
@@ -136,7 +206,7 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
   // ps = 1/(line.xx[1]^2);
   // qe=0.0 ;
 
-  for (auto t: t01) {cout << t<<"\n";}
+  // for (auto t: t01) {cout << t<<"\n";}
 
   // θLat = Nθ>1 ? LinRange(θs,θe,Nθ) : θs
 

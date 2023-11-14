@@ -99,8 +99,8 @@ cout<<"entering : "<< function <<endl;
   {
     int iAlt=0; int iLon=0, iLat =0;
     
-     for (int i=1; i < gGrid.get_nAlts(); i++)
-         SHOW( gGrid.radius_scgc(iLon,iLat, i) );          
+    //  for (int i=1; i < gGrid.get_nAlts(); i++)
+    //      SHOW( gGrid.radius_scgc(iLon,iLat, i) );          
   }
 
   Neutrals neutrals(gGrid, planet, time, indices, input, report);
