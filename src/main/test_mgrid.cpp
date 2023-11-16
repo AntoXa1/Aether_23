@@ -119,7 +119,7 @@ cout<<"entering : "<< function <<endl;
 
   // Anton's code:
   
-  mGrid.init_mgrid(planet, input, report);
+  mGrid.initMagneticGrid(planet, input, report);
   
   // Aaron's code:
   // mGrid.init_dipole_grid(quadtree, planet, input, report);
@@ -140,8 +140,7 @@ cout<<"entering : "<< function <<endl;
 
 
   // cout<< "radius_scgc = " << mGrid.radius_scgc.subcube(iLon,iLat, 0, iLon,iLat,10 ) <<" "<<iAlt <<endl; 
-  // SHOW(gGrid.dalt_center_scgc.slice(iAlt))  
-  
+  // SHOW(gGrid.dalt_center_scgc.slice(iAlt))    
   // exit(10);
 
   //-----------------------------------------------------  

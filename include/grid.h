@@ -121,7 +121,7 @@ public:
 		     Inputs input,
 		     Report &report);
   
-  void init_mgrid(Planets planet, Inputs input, Report &report);
+  void initMagneticGrid(Planets planet, Inputs input, Report &report);
 
   void init_mag_grid(Planets planet, Inputs input, Report &report);
 
