@@ -4,8 +4,12 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <stdlib.h>
 
 #include "../include/aether.h"
+
+#define WLEVEL 0
+#define QGRDTYPE 1
 
 void quartFunAndDeriv(double &f, double &dfdx, double rt, double  pMag, double q) { 
   double r=rt;
@@ -34,7 +38,9 @@ quartFunAndDeriv(fl,df, x1,pMag,qMag);
       if (fabs(fh) <= tol_){xRt=x2; return;};
   
       if ((fl > 0.0 && fh > 0.0) || (fl < 0.0 && fh < 0.0)){      
+        #if WLEVEL==1
         cout<<i<<":  Root must be bracketed in find_mag_root=  "<<fl<<"  "<<fh<<endl;
+        #endif
         x2*=1.3;            
       } else {
         break;
@@ -99,11 +105,13 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
   std::string function = "Grid::init_mgrid";
   static int iFunction = -1;
   report.enter(function, iFunction);
-  
-  double th_startDeg= 30;
-  double th_endDeg =  180.0 - th_startDeg;
-
   double cPI = 3.141592653589793238;
+
+  double th_startDeg= 30;
+  // double th_endDeg =  180.0 - th_startDeg;
+
+  double th_endDeg = cPI/2;
+  
   const double deg2rad = cPI/180.0;
 
   double th_s = deg2rad*th_startDeg;
@@ -155,6 +163,11 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
 
   for (int j_ph=1; j_ph<nPhi; j_ph++){
         ph_j = ph_[j_ph];
+        
+        qe = 0.;
+         
+
+        #if QGRDTYPE==1
 
         for (int i_line=0; i_line<N_mLines; i_line++){         
          // get the base of lines for a merid plane
@@ -162,15 +175,17 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
          LinesXx(j_ph,i_line,0) = xS[i_line]=sin(th_i)*cos(ph_j); 
          LinesZz(j_ph,i_line,0) = zS[i_line]=cos(th_i);          
         //  SHOW(ph_j); SHOW(th_i ); SHOW(zS[i_line]); SHOW(xS[i_line]);
+        //  SHOW(LinesZz(j_ph,i_line,0))
         }
+// exit(10);
 
 // SPLOT(xS,zS,N_mLines)
 
-        for (int l=0; l < N_mLines; l++){
+        for (int l=N_mLines-1; l>=0; l--){
         
           qs = LinesZz(j_ph,l,0); //for R=1;
           ps = 1/pow(LinesXx(j_ph,l,0),2);
-          qe = 0.;
+          
 
           LinesRr(j_ph,l,0) = 1.0;
           LinesQq(j_ph,l,0) = LinesZz(j_ph,l,0);                    
@@ -178,28 +193,69 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
           LinesXx(j_ph,l,0) = sqrt(1.0/ps)*cos(ph_j);
           LinesZz(j_ph,l,0) = LinesQq(j_ph,l,0);
         
-        r_i =0.9; //start from the given radius
+           r_i =0.9; //start from the given radius
 
-        for (int i_q=0; i_q<Nq; i_q++){
-            
-            LinesQq(j_ph, l, i_q) = q_i = qs + pow(t01[i_q],tPower) * (qe-qs);  
-        
-            find_mag_root(r_i, ps, q_i);
+          for (int i_q=0; i_q<Nq; i_q++){
+              
+              LinesQq(j_ph, l, i_q) = q_i = qs + pow(t01[i_q],tPower) * (qe-qs);  
+          
+              find_mag_root(r_i, ps, q_i);
 
-            LinesRr(j_ph, l, i_q)=r_i;                      
-            LinesXx(j_ph,l,i_q) = sqrt(pow(r_i,3)/ps)*cos(ph_j);
-            LinesZz(j_ph,l,i_q) = pow(r_i,3)*q_i;
+              LinesRr(j_ph, l, i_q)=r_i;                      
+              LinesXx(j_ph,l,i_q) = sqrt(pow(r_i,3)/ps)*cos(ph_j);
+              LinesZz(j_ph,l,i_q) = pow(r_i,3)*q_i;
 
-            // SHOW(r_i);SHOW(i_q);SHOW(LinesZz(j_ph,l,i_q));
-        }  //for i_q over a line            
+              // SHOW(r_i);SHOW(i_q);
+              SHOW(LinesZz(j_ph, l, i_q));
+          }  //for i_q over a line            
         
-SPLOT(LinesXx.tube(j_ph, l),LinesZz.tube(j_ph, l),Nq)
+// SPLOT(LinesXx.tube(j_ph, l),LinesZz.tube(j_ph, l),Nq)
+
+
+// WriteScatterPntsDataToFile
+{
+//      assumes pointwise data: x_col y_col f(x,y)_col
+
+        char cwd[100];
         
+        const std::string name = "scatgrid.dat";
+        std::string  fdir(getcwd(cwd, sizeof(cwd)));
+        std::string fileName = fdir + "/" + "_" + name+"_dbg.dat";   
+
+        std::cout << "Current working directory: " << fileName << std::endl;
+        std::ofstream output_file(fileName);
+        
+        int n_rows=xS.n_rows;
+        for (int i = 0; i < n_rows; i++) {  
+          // x=xS;
+          // y=zS;
+          output_file << xS(i)<< "\t" << zS(i) << std::endl;
+        }           
+        output_file.close();
+
+}
+
+          exit(10);        
 
         }//for over separate lines
 
 
-  }
+        #elif QGRDTYPE==2
+          qs = cos(th_s);
+
+          std::vector<double> Qlin;
+          Qlin = linspace(qs, qe, Nq);
+          
+          
+      
+          
+          exit(10);
+
+        #else
+          throw std::runtime_error("unknown QGRDTYPE in  Grid::init_mgrid");
+        #endif
+
+  } //phi integration
   
 
   // qs = line.zz[1];

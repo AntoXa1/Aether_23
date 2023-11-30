@@ -75,6 +75,11 @@
         "valarray": "cpp",
         "variant": "cpp",
         "vector": "cpp",
-        "__verbose_abort": "cpp"
+        "__verbose_abort": "cpp",
+        "condition_variable": "cpp",
+        "thread": "cpp",
+        "__bits": "cpp",
+        "*.tcc": "cpp",
+        "memory_resource": "cpp"
     }
 }
