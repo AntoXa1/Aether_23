@@ -101,7 +101,7 @@ quartFunAndDeriv(fl,df, x1,pMag,qMag);
   
 }
 
-void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
+void Grid::initMagneticGrid(Planets planet, Inputs input, Report &report) {
   std::string function = "Grid::init_mgrid";
   static int iFunction = -1;
   report.enter(function, iFunction);
@@ -117,10 +117,15 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
   double th_s = deg2rad*th_startDeg;
   double th_e = deg2rad*th_endDeg;
   
+  int Nlons=this->nX;
+  int Nlats=this->nY;
+  int Nalts=this->nZ;
+
+
   int Nq =10,
   tPower =1,
-  nPhi = 2,
-  N_mLines = 40; //nFootPntsPerLon = N_mLines
+  nPhi = 2, // Nlons,
+  N_mLines = 4; //nFootPntsPerLon = N_mLines
 
   std::vector<double> t01; //parameter along the B-line
   std::vector<double> th_; //theta of b-field foot for a meridional cross-section 
@@ -130,7 +135,7 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
   fvec LinesThetaFoot(N_mLines);
   // fvec ph_(nPhi); 
   
-  arma_cube LinesQq(nPhi, N_mLines, Nq);
+  arma_cube LinesQq(nPhi, N_mLines, Nq); //2do: convert to 2d = no phi
   arma_cube LinesXx(nPhi, N_mLines, Nq);
   arma_cube LinesYy(nPhi, N_mLines, Nq);
   arma_cube LinesZz(nPhi, N_mLines, Nq);
@@ -157,7 +162,7 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
   // else if (N_mLines==1) 
   // {th_[0]=th_s;}
 
-  double qs,qe,ps,th_i,ph_j,q_i,r_i;
+  double qs,qe,ps,th_i,ph_i,th_j,q_i,r_i;
 
 
 
@@ -187,8 +192,8 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
           ps = 1/pow(LinesXx(j_ph,l,0),2);
           
 
-          LinesRr(j_ph,l,0) = 1.0;
-          LinesQq(j_ph,l,0) = LinesZz(j_ph,l,0);                    
+          LinesRr(i_ph,l,0) = 1.0;
+          LinesQq(i_ph,l,0) = LinesZz(i_ph,l,0);                    
 
           LinesXx(j_ph,l,0) = sqrt(1.0/ps)*cos(ph_j);
           LinesZz(j_ph,l,0) = LinesQq(j_ph,l,0);
@@ -201,13 +206,26 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
           
               find_mag_root(r_i, ps, q_i);
 
-              LinesRr(j_ph, l, i_q)=r_i;                      
-              LinesXx(j_ph,l,i_q) = sqrt(pow(r_i,3)/ps)*cos(ph_j);
-              LinesZz(j_ph,l,i_q) = pow(r_i,3)*q_i;
+              LinesRr(i_ph, l, i_q)=r_i;                      
+              LinesXx(i_ph,l,i_q) = sqrt(pow(r_i,3)/ps)*cos(ph_i);
+              LinesZz(i_ph,l,i_q) = pow(r_i,3)*q_i;
+            
+            // th_j = acos(pow(r_i,2)*q_i);
+            
+            // magP_scgc(i_ph, l, i_q) = 
+
+            // magQ_scgc(i_ph, l, i_q) = LinesQq(i_ph, l, i_q);
+                     
+            
+
+            // this->geoLon_scgc(iX,iY,iZ) = magPhi_scgc(iX,iY,iZ);             
+            // this->geoLat_scgc(i_ph,iY,iZ) = theta;
+            // this->geoAlt_scgc(iX,iY,iZ) = r;
 
               // SHOW(r_i);SHOW(i_q);
-              SHOW(LinesZz(j_ph, l, i_q));
-          }  //for i_q over a line            
+              SHOW(LinesZz(i_ph, l, i_q));
+          }   //for i_q over a line            
+        
         
 // SPLOT(LinesXx.tube(j_ph, l),LinesZz.tube(j_ph, l),Nq)
 
@@ -275,59 +293,11 @@ void Grid::init_mgrid(Planets planet, Inputs input, Report &report) {
 {
 
   
-
 cout<<magPhi_scgc.n_rows<<"\n"<<magPhi_scgc.n_cols<<"\n"<<magPhi_scgc.n_slices<<"\n";
-
 }
-  // DipoleLine mLine;
-
-// for (auto t: th_) {cout <<"t="<< t<<"\n";}; exit(10);
-
-  // DipoleLine *Lines ;
-  // Line[0] = new DipoleLine[10];
-  
-  // Lines[0] = new DipoleLine(Nq,tPower);
-  
-  // SHOW(Lines[0].numElem)
-
-  // [1](Nq,tPower);
-
-  // [N_mLines];
-
-//  for(int i=0; i<N_mLines;i++){
-//   Lines[i] = DipoleLine(Nq,tPower);
-//  }
-
-  // cout<< Lines[0].numElem <<endl;
-
-  //  = {mLine(Nq,tPower)};
-
-
-  
+    
   double res = -1.0;
   
-  // for(int i=0; i<N_mLines;i++){
-    // double y = quartFun(r,pMag,q);
-  // }
-
-  // for (auto line: Lines){ 
-  //   line = new DipoleLine(Nq,tPower);
-  // }
-
-
-
-  // rootOfQuarticEqu(res, r,  pMag, q  ){
-
-  // for(auto line: Lines){
-  //   SHOW(line.numElem)
-  //   SHOW(line.xx.size())
-  // }
-
-
-  // for (auto t: Lines[1].tt) {cout << t<<"\n";}
-
-  // exit(10);
-
 }
 
 
@@ -551,9 +521,6 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
 	    }
     }
   }
-
-
-
 
 
   // save 3D mag grid for examination
