@@ -107,11 +107,14 @@ cout<<"entering : "<< function <<endl;
 
 
   //------------Initialize Magnetic grid------------------
-  SHOW(input.get_nAltsMag())
+  // SHOW(input.get_nAltsMag())
   
   int  Nq =10;
   int tPower =1;
+
   DipoleLine mLine(Nq,tPower);
+
+// SHOW(input.get_nLonsMag()); exit(10);
 
   Grid mGrid(input.get_nLonsMag(),
        input.get_nLatsMag(),

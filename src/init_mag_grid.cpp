@@ -8,8 +8,32 @@
 
 #include "../include/aether.h"
 
+
 #define WLEVEL 0
-#define QGRDTYPE 1
+#define QGRDTYPE 2
+
+void HalfAndHalfLinrange(std::vector<double>& qLin, int size, double xL, double xR, 
+                    double offSetFromMid){    
+    assert(size % 2 == 0 && "size must be even in HalfAndHalfLinrange ");  
+    std::vector<double> qLinPos;
+    
+    qLin = linspace(xL, -offSetFromMid, size/2); //#p_i from #q_s
+    for (auto element : qLin) {
+      std::cout << element << " ";
+    }
+
+    qLinPos = linspace(offSetFromMid, xR, size/2);
+    
+    qLin.insert(qLin.end(), qLinPos.begin(), qLinPos.end()); //symmetrical about 0; 0 is not included     
+}
+
+void GetDipoleXyz(double r_i, double ph_j, double q_i, double pLine, 
+                 double &x, double &y, double &z, double &th){
+      x = sqrt(pow(r_i,3)/pLine)*cos(ph_j);
+      y = sqrt(pow(r_i,3)/pLine)*sin(ph_j);
+      z = pow(r_i,3)*q_i;
+      th = acos(pow(r_i,2)*q_i);
+}
 
 void quartFunAndDeriv(double &f, double &dfdx, double rt, double  pMag, double q) { 
   double r=rt;
@@ -18,7 +42,7 @@ void quartFunAndDeriv(double &f, double &dfdx, double rt, double  pMag, double q
   return ;
 }
 
-void find_mag_root(double &xRt, double pMag, double qMag){
+void SolveDipoleEq(double &xRt, double pMag, double qMag){
 
   double maxit =100, f,df,dx, dxold,x1,x2,xl,xh,fl,fh,dxL,dxH,dxN,tmp1,
          tolRt_ = 1e-3,
@@ -39,7 +63,7 @@ quartFunAndDeriv(fl,df, x1,pMag,qMag);
   
       if ((fl > 0.0 && fh > 0.0) || (fl < 0.0 && fh < 0.0)){      
         #if WLEVEL==1
-        cout<<i<<":  Root must be bracketed in find_mag_root=  "<<fl<<"  "<<fh<<endl;
+        cout<<i<<":  Root must be bracketed in SolveDipoleEq=  "<<fl<<"  "<<fh<<endl;
         #endif
         x2*=1.3;            
       } else {
@@ -48,7 +72,7 @@ quartFunAndDeriv(fl,df, x1,pMag,qMag);
     
   }
   if ((fl > 0.0 && fh > 0.0) || (fl < 0.0 && fh < 0.0))
-      throw std::runtime_error("Root must be bracketed in find_mag_root");
+      throw std::runtime_error("Root must be bracketed in SolveDipoleEq");
 
   if (fl < 0.0){
       xl=x1;
@@ -93,11 +117,11 @@ quartFunAndDeriv(fl,df, x1,pMag,qMag);
       xh=xRt;
     }
     if(i==maxit){
-        throw std::runtime_error("max_iterations reached in 'find_mag_root' ");  
+        throw std::runtime_error("max_iterations reached in 'SolveDipoleEq' ");  
     }
   }
-  // SHOW("find_mag_root");SHOW(x0);SHOW(pMag);SHOW(qMag);SHOW(x1);SHOW(df);SHOW(y0);
-  // SHOW("find_mag_root result:"); SHOW(r);SHOW(i);
+  // SHOW("SolveDipoleEq");SHOW(x0);SHOW(pMag);SHOW(qMag);SHOW(x1);SHOW(df);SHOW(y0);
+  // SHOW("SolveDipoleEq result:"); SHOW(r);SHOW(i);
   
 }
 
@@ -107,10 +131,12 @@ void Grid::initMagneticGrid(Planets planet, Inputs input, Report &report) {
   report.enter(function, iFunction);
   double cPI = 3.141592653589793238;
 
+  precision_t radius0 = planet.get_radius(0.0);
+
   double th_startDeg= 30;
   // double th_endDeg =  180.0 - th_startDeg;
 
-  double th_endDeg = cPI/2;
+  double th_endDeg = 90 - th_endDeg;
   
   const double deg2rad = cPI/180.0;
 
@@ -121,11 +147,14 @@ void Grid::initMagneticGrid(Planets planet, Inputs input, Report &report) {
   int Nlats=this->nY;
   int Nalts=this->nZ;
 
+  SHOW(this->nY); SHOW(nLats)
 
-  int Nq =10,
+
+  int Nq = Nalts,
   tPower =1,
-  nPhi = 2, // Nlons,
-  N_mLines = 4; //nFootPntsPerLon = N_mLines
+  nPhi = Nlons,
+
+  N_mLines = Nlats; //nFootPntsPerLon = N_mLines
 
   std::vector<double> t01; //parameter along the B-line
   std::vector<double> th_; //theta of b-field foot for a meridional cross-section 
@@ -164,16 +193,16 @@ void Grid::initMagneticGrid(Planets planet, Inputs input, Report &report) {
 
   double qs,qe,ps,th_i,ph_i,th_j,q_i,r_i;
 
+  
 
-
-  for (int j_ph=1; j_ph<nPhi; j_ph++){
-        ph_j = ph_[j_ph];
-        
-        qe = 0.;
+  
          
 
-        #if QGRDTYPE==1
-
+#if QGRDTYPE==1
+    for (int j_ph=1; j_ph<nPhi; j_ph++){
+        double ph_j = ph_[j_ph];
+        
+        qe = 0.;
         for (int i_line=0; i_line<N_mLines; i_line++){         
          // get the base of lines for a merid plane
          th_i = th_[i_line];
@@ -186,48 +215,51 @@ void Grid::initMagneticGrid(Planets planet, Inputs input, Report &report) {
 
 // SPLOT(xS,zS,N_mLines)
 
-        for (int l=N_mLines-1; l>=0; l--){
+        for (int l = N_mLines-1; l>=0; l--){
         
           qs = LinesZz(j_ph,l,0); //for R=1;
           ps = 1/pow(LinesXx(j_ph,l,0),2);
           
 
-          LinesRr(i_ph,l,0) = 1.0;
-          LinesQq(i_ph,l,0) = LinesZz(i_ph,l,0);                    
+          LinesRr(j_ph,l,0) = 1.0;
+          LinesQq(j_ph,l,0) = LinesZz(j_ph,l,0);                    
 
           LinesXx(j_ph,l,0) = sqrt(1.0/ps)*cos(ph_j);
           LinesZz(j_ph,l,0) = LinesQq(j_ph,l,0);
         
            r_i =0.9; //start from the given radius
 
-          for (int i_q=0; i_q<Nq; i_q++){
+          for (int i_q=0; i_q < Nq; i_q++){
               
-              LinesQq(j_ph, l, i_q) = q_i = qs + pow(t01[i_q],tPower) * (qe-qs);  
-          
-              find_mag_root(r_i, ps, q_i);
+              LinesQq(j_ph, l, i_q) = q_i = qs + pow(t01[i_q],tPower) * (qe-qs);                                     
+              SolveDipoleEq(r_i, ps, q_i);
 
-              LinesRr(i_ph, l, i_q)=r_i;                      
-              LinesXx(i_ph,l,i_q) = sqrt(pow(r_i,3)/ps)*cos(ph_i);
-              LinesZz(i_ph,l,i_q) = pow(r_i,3)*q_i;
+SHOW(q_i)
+              LinesRr(j_ph, l, i_q)=r_i;                      
+              LinesXx(j_ph,l,i_q) = sqrt(pow(r_i,3)/ps)*cos(ph_i);
+              LinesZz(j_ph,l,i_q) = pow(r_i,3)*q_i;
             
-            // th_j = acos(pow(r_i,2)*q_i);
-            
-            // magP_scgc(i_ph, l, i_q) = 
-
-            // magQ_scgc(i_ph, l, i_q) = LinesQq(i_ph, l, i_q);
-                     
-            
-
+            // th_j = acos(pow(r_i,2)*q_i);            
+            // magP_scgc(j_ph, l, i_q) = 
+            // magQ_scgc(j_ph, l, i_q) = LinesQq(j_ph, l, i_q);
+                               
             // this->geoLon_scgc(iX,iY,iZ) = magPhi_scgc(iX,iY,iZ);             
-            // this->geoLat_scgc(i_ph,iY,iZ) = theta;
+            // this->geoLat_scgc(j_ph,iY,iZ) = theta;
             // this->geoAlt_scgc(iX,iY,iZ) = r;
 
               // SHOW(r_i);SHOW(i_q);
-              SHOW(LinesZz(i_ph, l, i_q));
-          }   //for i_q over a line            
+              SHOW(LinesZz(j_ph, l, i_q));
+        
+        }   //for i_q over a line            
+        
+        std::sort(LongQ.begin(), LongQ.end());
+            
+          
         
         
-// SPLOT(LinesXx.tube(j_ph, l),LinesZz.tube(j_ph, l),Nq)
+        exit(10);
+
+          // SPLOT(LinesXx.tube(j_ph, l),LinesZz.tube(j_ph, l),Nq)
 
 
 // WriteScatterPntsDataToFile
@@ -237,17 +269,18 @@ void Grid::initMagneticGrid(Planets planet, Inputs input, Report &report) {
         char cwd[100];
         
         const std::string name = "scatgrid.dat";
+
         std::string  fdir(getcwd(cwd, sizeof(cwd)));
+
         std::string fileName = fdir + "/" + "_" + name+"_dbg.dat";   
+
 
         std::cout << "Current working directory: " << fileName << std::endl;
         std::ofstream output_file(fileName);
         
         int n_rows=xS.n_rows;
         for (int i = 0; i < n_rows; i++) {  
-          // x=xS;
-          // y=zS;
-          output_file << xS(i)<< "\t" << zS(i) << std::endl;
+          output_file << xS(i)<< " " << zS(i) << std::endl;
         }           
         output_file.close();
 
@@ -258,31 +291,160 @@ void Grid::initMagneticGrid(Planets planet, Inputs input, Report &report) {
         }//for over separate lines
 
 
-        #elif QGRDTYPE==2
-          qs = cos(th_s);
 
-          std::vector<double> Qlin;
-          Qlin = linspace(qs, qe, Nq);
-          
-          
-      
-          
-          exit(10);
+// IMPORTANT! the pq-grid is chosen to be orthogonal; from this and from the fact that this should respect the "dipolar" equation,
+// several no-trivial consequences for the pq-grid follow
 
-        #else
+// There is only one *ordered* grid in magnetic case: p,q,ph: as it was said, it is not *fully* arbitrary: p is calculated to respect
+// 1) dipole connectiviy and 2) the specific choice of the q grid spacing; see Figure.. 
+// the dependence of the spacing of p on q comes from that on the surface of r_i=1, the qs(ps) = cos(th(ps)). 
+// ps = 1/sin^2(th); The q-grid should be such as to contain the qs-s; if we would choose p completely independently the q-grid cannot be
+// guaranteed to be everywhere orhogonal to p-grid;
+
+// Notice: the geoLon_scgc, geoLat_scgc, geoAlt_scgc, magX,Y,Z etc are specifically for the maggrid. The most important connected Grid
+// id the magP(i,j,k) and magQ(i,j,k) grids; everything else is dependent;
+// that it for a given i,j,k => p,q => r_ijk, th_ijk, ph_ijk.
+
+// in the ph-p-q grid the "lon"=ph, "lat"=p, "alt"=q
+
+#elif QGRDTYPE==2
+
+   if (nLats != nAlts){
+    SHOW(nLats); SHOW(nAlts)
+    throw std::runtime_error("It should be nLats /= nAlts if QGRDTYPE==2 in  Grid::init_mgrid");
+   } 
+
+    SHOW(nLons); SHOW(nLats); SHOW(nAlts);
+    double x_ij, y_ij, z_ij, th_ij;
+    qe = 0.;
+    
+    double qL = - 0.9,
+      qR = fabs(qL),
+      minAbsQ = 0.05;
+
+    // construct a temporary q-grid
+    std::vector<double> qLin;   
+    
+    HalfAndHalfLinrange(qLin, Nalts,qL, qR, minAbsQ);    
+    // SPLOT(qLin,qLin,Nlats); exit(10);
+    
+    
+    // begin populating a 3D: ph,p,q -grid
+    for (int j_ph=0; j_ph<nLons; j_ph++){
+
+      SHOW(j_ph)
+      double ph_j = ph_[j_ph];
+          
+      magLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
+      this->geoLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
+      this->magLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
+
+            SHOW(this->magQ_scgc.n_rows)
+            SHOW(this->magQ_scgc.n_cols)
+            SHOW(this->magQ_scgc.n_slices)
+
+            
+          for (int l_qs = 0; l_qs < Nlats; l_qs++){  // for (int l_qs = qLin.size()-1; l_qs >= 0; l_qs--){
+            
+            double qs = qLin[l_qs];
+            double ps = 1.0/(1.0-pow(qs,2));
+
+            SHOW(ps)
+            SHOW(magP_scgc.n_rows)
+            SHOW(magP_scgc.n_cols)
+            SHOW(magP_scgc.n_slices); SHOW(nAlts);
+            SHOW(qLin.size())
+           
+            this->magP_scgc.tube(j_ph, l_qs).fill(ps); //p-grid is not independent: defined by the qs spacing
+            
+            
+
+            double th_i = acos(qs);  
+
+            std::cout << "\n qs,ps = "<< qs << "; " << ps << "; " << th_i/cPI*180<<endl;
+                        
+            int delt_i = (qs>0) ? -1:1;            
+            
+            int i_q = l_qs;
+            
+            double  qNotCrossZero = qLin[i_q]*qLin[i_q+delt_i];
+            
+            SHOW(i_q); SHOW(delt_i); SHOW(qNotCrossZero)
+            
+            while (qNotCrossZero > 0){
+              // for simplicity, we populate q-grid as we go along a given magnetic line from bottom towards the end          
+              // that it the direction of this passage is important if we want to have a condistent q-grid
+
+              q_i = qLin[i_q];
+              
+              SolveDipoleEq(r_i, ps, q_i);
+              GetDipoleXyz(r_i, ph_j, q_i, ps, x_ij, y_ij, z_ij, th_ij);              
+
+                            
+              this->geoLat_scgc(j_ph, l_qs, i_q) = this->magLat_scgc(j_ph, l_qs, i_q) = th_ij;
+              this->geoAlt_scgc(j_ph, l_qs, i_q) = this->magAlt_scgc(j_ph, l_qs, i_q) = r_i*radius0;              
+                                                                                    
+
+              magX_scgc(j_ph, l_qs, i_q)= x_ij;
+              magY_scgc(j_ph, l_qs, i_q)= y_ij;
+              magZ_scgc(j_ph, l_qs, i_q)=z_ij;
+
+              std::cout <<" i_q,q,r_i:  " << i_q << "; " << qLin[i_q] << "; "<<r_i<<endl;
+              qNotCrossZero = qLin[i_q]*qLin[i_q+delt_i]; 
+
+              i_q = i_q + delt_i;              
+
+            }              
+            cout<<" end of the line -------- "<<endl;                  
+            // SPLOT(LinesXx.tube(j_ph, l),LinesZz.tube(j_ph, l),Nq)
+
+            // copy to the grid:
+            for(int i=0; i<nAlts; i++){
+              this->magQ_scgc(j_ph, l_qs, i) = qLin[i]; // SHOW(qLin[i])
+            }
+
+
+          }
+                                    
+        SHOW(j_ph); 
+
+                
+          // exit(10);
+} //phi integration
+
+#elif QGRDTYPE==3
+double x_ij, y_ij, z_ij, th_ij, ph_j;
+double qL = - 0.9, qR = fabs(qL), minAbsQ = 0.05;
+// construct a temporary q-grid
+std::vector<double> qLin;   
+    
+HalfAndHalfLinrange(qLin, Nalts,qL, qR, minAbsQ);    
+   
+    // begin populating a 3D: ph,p,q -grid
+for (int j_ph=0; j_ph<nLons; j_ph++){  
+  ph_j = ph_[j_ph];
+
+  magLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
+  this->geoLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
+  this->magLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
+
+  for (int l=0; l<Nlats; l++){
+    if(l>0){
+
+    } else {
+      xS[l]=sin(th_[l])*cos(ph_j);
+      zS[l]=cos(th_[l]);
+    }
+
+  }
+
+}    
+
+
+
+#else
           throw std::runtime_error("unknown QGRDTYPE in  Grid::init_mgrid");
-        #endif
-
-  } //phi integration
-  
-
-  // qs = line.zz[1];
-  // ps = 1/(line.xx[1]^2);
-  // qe=0.0 ;
-
-  // for (auto t: t01) {cout << t<<"\n";}
-
-  // θLat = Nθ>1 ? LinRange(θs,θe,Nθ) : θs
+#endif        
 
   exit(10);
 
@@ -485,9 +647,6 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
         //if (iZ==nZ/2){
         //  cout << magP_scgc(iX,iY,iZ) <<endl;
         //  cout << Llr[0]<<" "<<Llr[1]<<" "<<Llr[2] << endl;
-        //}
-        
-        transform_llr_to_xyz(Llr, Xyz);
 
         magX_scgc(iX,iY,iZ)=Xyz[0];
         magY_scgc(iX,iY,iZ)=Xyz[1];

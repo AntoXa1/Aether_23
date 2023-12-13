@@ -56,7 +56,9 @@ endif()
 target_compile_options(aether PUBLIC)
 
 set(SHARE_INCLUDE ${PROJECT_SOURCE_DIR}/share/include)
-set(CMAKE_CXX_STANDARD 11)
+# set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_FIND_ROOT_PATH ${SHARE_INCLUDE}
                          ${CMAKE_FIND_ROOT_PATH}

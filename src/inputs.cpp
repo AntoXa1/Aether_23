@@ -57,9 +57,9 @@ Inputs::Inputs(Times &time, Report &report) {
   mag_grid_input.alt_min = 100.0 * 1000.0;
   mag_grid_input.dalt = 5.0 * 1000.0;
 
-  nLonsMag = 12;
-  nLatsMag = 20;
-  nAltsMag = 101;
+  nLonsMag = 4;
+  nLatsMag = 10;
+  nAltsMag = 10;
 
   if (nLonsMag == 1) {
     mag_grid_input.lon_min = 0.0;

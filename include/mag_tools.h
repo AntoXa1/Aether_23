@@ -1,7 +1,8 @@
 
+#define sign(x) ((x) > 0) ? 1 : ((x) < 0) ? -1 : 0
+
 #define GET_NAME(v) #v
 // returns the name of the variable
-
 #define SHOW(x) std::cout << #x"=" << x << std::endl;
 // prints "varible name" = variable
 
@@ -36,8 +37,12 @@ std::vector<double> linspace(T start_in, T end_in, int num_in)
 
 template <typename T>
 void PrintToFileAndExecCompanionPlotScript(T x, const std::string& name) { 
-  std::string cwd = "/Users/dorodnitsyn/WORK/PROJECTS/Aether_pub/Aether/run.test_mgrid";
+  // std::string cwd = "/Users/dorodnitsyn/WORK/PROJECTS/Aether_pub/Aether/run.test_mgrid";
+
+  char cwd_[100];
+  std::string  cwd(getcwd(cwd_, sizeof(cwd_)));       
   auto fileName = cwd + "/" + "_" + name+"_dbg.dat";   
+
   SHOW(fileName)
 
   int n_rows=0, n_cols=0, n_depth=0;
@@ -80,14 +85,36 @@ void PrintToFileAndExecCompanionPlotScript(T x, const std::string& name) {
 
 }
 
+// char cwd[100];
+// std::string fdir(getcwd(cwd, sizeof(cwd)));        
+
+//   std::string  fdir(getcwd(cwd, sizeof(cwd)));
+//   auto fileName = fdir + "/" + "_data.dat";   
+//   SHOW(fileName)
+//   exit(10);
+//     SHOW(len)
+
+//     std::ofstream output_file(fileName);
+
+//     for (int i = 0; i < len; i++) {        
+//           output_file << x[i] <<"\t"<< y[i]<< std::endl;           
+//     }
+//     output_file.close();
+
+//   const std::string pyFileToExecute = fdir + "/" + "./_myscat.py";
+//   SHOW(pyFileToExecute)
+
 template <typename T>
 void PrintToFileAndExecCompanionScatterPlotScript(T x, T y, int len) { 
   //pring two columns of the length, len
+  
   std::string cwd = "/Users/dorodnitsyn/WORK/PROJECTS/Aether_pub/Aether/run.test_mgrid";
-  auto fileName = cwd + "/" + "_data.dat";   
-  SHOW(fileName)
 
-    SHOW(len)
+char cwd1[100];
+std::string fdir(getcwd(cwd1, sizeof(cwd1)));
+auto fileName = fdir + "/" + "_data.dat";   
+SHOW(fileName) 
+SHOW(len)
 
     std::ofstream output_file(fileName);
 
@@ -95,8 +122,11 @@ void PrintToFileAndExecCompanionScatterPlotScript(T x, T y, int len) {
           output_file << x[i] <<"\t"<< y[i]<< std::endl;           
     }
     output_file.close();
+    // exit(10);
 
-  const std::string pyFileToExecute = cwd + "/" + "./_myscat.py";
+
+  // const std::string pyFileToExecute = fdir + "/" + "./_myscat.py";
+  const std::string pyFileToExecute = fdir + "/" + "./plot_from_cpp.jl";
   SHOW(pyFileToExecute)
   
   system(pyFileToExecute.c_str());
