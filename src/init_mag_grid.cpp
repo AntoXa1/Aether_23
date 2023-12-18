@@ -95,7 +95,7 @@ quartFunAndDeriv(fl,df, x1,pMag,qMag);
 
     if ((dxL*dxH>0) || fabs(2*dxN > df*dxold)){
       // out of range or not decreasing fast enough
-      dx=0.5*(xh-xl);
+      dx=0.4*(xh-xl);
       xRt = xl+dx;
       if (fabs(xl-xRt) <tol_){return;}
     } else { //NR step
@@ -257,7 +257,7 @@ SHOW(q_i)
           
         
         
-        exit(10);
+        // exit(10);
 
           // SPLOT(LinesXx.tube(j_ph, l),LinesZz.tube(j_ph, l),Nq)
 
@@ -384,10 +384,9 @@ SHOW(q_i)
               this->geoLat_scgc(j_ph, l_qs, i_q) = this->magLat_scgc(j_ph, l_qs, i_q) = th_ij;
               this->geoAlt_scgc(j_ph, l_qs, i_q) = this->magAlt_scgc(j_ph, l_qs, i_q) = r_i*radius0;              
                                                                                     
-
-              magX_scgc(j_ph, l_qs, i_q)= x_ij;
-              magY_scgc(j_ph, l_qs, i_q)= y_ij;
-              magZ_scgc(j_ph, l_qs, i_q)=z_ij;
+              magX_scgc(j_ph, l_qs, i_q) = x_ij;
+              magY_scgc(j_ph, l_qs, i_q) = y_ij;
+              magZ_scgc(j_ph, l_qs, i_q) = z_ij;
 
               std::cout <<" i_q,q,r_i:  " << i_q << "; " << qLin[i_q] << "; "<<r_i<<endl;
               qNotCrossZero = qLin[i_q]*qLin[i_q+delt_i]; 
@@ -420,7 +419,7 @@ std::vector<double> qLin;
     
 HalfAndHalfLinrange(qLin, Nalts,qL, qR, minAbsQ);    
    
-    // begin populating a 3D: ph,p,q -grid
+// begin populating a 3D: ph,p,q -grid
 for (int j_ph=0; j_ph<nLons; j_ph++){  
   ph_j = ph_[j_ph];
 
@@ -446,7 +445,7 @@ for (int j_ph=0; j_ph<nLons; j_ph++){
           throw std::runtime_error("unknown QGRDTYPE in  Grid::init_mgrid");
 #endif        
 
-  exit(10);
+  // exit(10);
 
 // turn the switch on! 
   this->set_IsMagGrid(1);

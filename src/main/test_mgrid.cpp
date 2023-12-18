@@ -123,7 +123,9 @@ cout<<"entering : "<< function <<endl;
   // Anton's code:
   
   mGrid.initMagneticGrid(planet, input, report);
+  cout << "initMagneticGrid done"<< endl;
   
+
   // Aaron's code:
   // mGrid.init_dipole_grid(quadtree, planet, input, report);
 
@@ -144,7 +146,7 @@ cout<<"entering : "<< function <<endl;
 
   // cout<< "radius_scgc = " << mGrid.radius_scgc.subcube(iLon,iLat, 0, iLon,iLat,10 ) <<" "<<iAlt <<endl; 
   // SHOW(gGrid.dalt_center_scgc.slice(iAlt))    
-  // exit(10);
+  
 
   //-----------------------------------------------------  
 
@@ -156,17 +158,19 @@ cout<<"entering : "<< function <<endl;
   Neutrals mNeutrals(mGrid, planet, time, indices, input, report);
   cout<<" Initialize Neutrals on dipole grid: done .."<<endl;
 
+exit(10);
+
 // Initialize Ions on m-geographic grid:
   Ions mIons(mGrid, planet, input, report);
   cout<<"Initialize Ions on m-geographic grid: done .."<<endl;
-
+sleep(5);
 // Once EUV, neutrals, and ions have been defined, pair cross sections
 
 // Initialize the EUV system:
     
 Euv euv(input, report);
 cout<<"Initialize the EUV system: done .."<<endl;
-
+sleep(5);
 // exit(10);    
 if (!euv.is_ok())
       throw std::string("EUV initialization failed!");
