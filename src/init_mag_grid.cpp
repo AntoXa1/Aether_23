@@ -262,29 +262,6 @@ SHOW(q_i)
           // SPLOT(LinesXx.tube(j_ph, l),LinesZz.tube(j_ph, l),Nq)
 
 
-// WriteScatterPntsDataToFile
-{
-//      assumes pointwise data: x_col y_col f(x,y)_col
-
-        char cwd[100];
-        
-        const std::string name = "scatgrid.dat";
-
-        std::string  fdir(getcwd(cwd, sizeof(cwd)));
-
-        std::string fileName = fdir + "/" + "_" + name+"_dbg.dat";   
-
-
-        std::cout << "Current working directory: " << fileName << std::endl;
-        std::ofstream output_file(fileName);
-        
-        int n_rows=xS.n_rows;
-        for (int i = 0; i < n_rows; i++) {  
-          output_file << xS(i)<< " " << zS(i) << std::endl;
-        }           
-        output_file.close();
-
-}
 
           exit(10);        
 

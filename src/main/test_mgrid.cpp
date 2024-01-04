@@ -6,6 +6,13 @@
 #include "../include/aether.h"
 #include <type_traits>
 
+// #include <termios.h>
+// #include <unistd.h>
+// #define PAUS() \
+//     (std::cout << "Press any key to continue...", \
+//      std::cout.flush(), \
+//      getch())
+
 // (cd ../ && make clean && make -j)
 
 // -----------------------------------------------------------------------------
@@ -37,7 +44,39 @@ DipoleLine::DipoleLine(int numElemIn,int tPow):tPower(tPow),numElem(numElemIn),
 };
 
 
+void WriteScatteredGridToFile(Grid grid){
+//      WriteScatterPntsDataToFile
+//      assumes pointwise data: x_col y_col f(x,y)_col
 
+        char cwd[100];        
+        const std::string name = "scatgrid.dat";
+
+        std::string  fdir(getcwd(cwd, sizeof(cwd)));
+        std::string fileName = fdir + "/" + "_" + name+"_dbg.dat";   
+
+
+        std::cout << "Current working directory: " << fileName << std::endl;
+        std::ofstream output_file(fileName);
+        
+        int Nlons=grid.get_nLons();
+        int Nlats=grid.get_nLats();
+        int Nalts=grid.get_nAlts();
+        
+        for (int j_ph=0; j_ph<Nlons; j_ph++){
+          for (int i_lat = 0; i_lat < Nlats; i_lat++){
+            for (int k_q = 0; k_q < Nlats; k_q++){
+
+        // int n_rows=xS.n_rows;
+        // for (int i = 0; i < n_rows; i++) {  
+        //   output_file << xS(i)<< " " << zS(i) << std::endl;
+
+
+            }// k-q-loop
+          }// i_lat-loop         
+        } // j-loop 
+        output_file.close();
+        
+}
 
 int main() {
 
@@ -140,15 +179,15 @@ cout<<"entering : "<< function <<endl;
       SHOW(mGrid.geoAlt_scgc(iLon,iLat, i) );    
       SHOW(i);
     }
-    // exit(10);
+    
   
 
+// WriteScatteredGridToFile(mGrid);
 
-  // cout<< "radius_scgc = " << mGrid.radius_scgc.subcube(iLon,iLat, 0, iLon,iLat,10 ) <<" "<<iAlt <<endl; 
-  // SHOW(gGrid.dalt_center_scgc.slice(iAlt))    
+// cout<< "radius_scgc = " << mGrid.radius_scgc.subcube(iLon,iLat, 0, iLon,iLat,10 ) <<" "<<iAlt <<endl; 
+// SHOW(gGrid.dalt_center_scgc.slice(iAlt))    
   
-
-  //-----------------------------------------------------  
+//-----------------------------------------------------  
 
   // iterate p,q; convert to r,theta,phi; 
   // p,q, is uniform, while rThPhi is non-uniform
@@ -158,43 +197,60 @@ cout<<"entering : "<< function <<endl;
   Neutrals mNeutrals(mGrid, planet, time, indices, input, report);
   cout<<" Initialize Neutrals on dipole grid: done .."<<endl;
 
-exit(10);
+
 
 // Initialize Ions on m-geographic grid:
   Ions mIons(mGrid, planet, input, report);
   cout<<"Initialize Ions on m-geographic grid: done .."<<endl;
-sleep(5);
+
+
 // Once EUV, neutrals, and ions have been defined, pair cross sections
 
 // Initialize the EUV system:
     
 Euv euv(input, report);
 cout<<"Initialize the EUV system: done .."<<endl;
-sleep(5);
-// exit(10);    
+
+
+  
 if (!euv.is_ok())
       throw std::string("EUV initialization failed!");
     
 euv.pair_euv(mNeutrals, mIons, report);
 
-    // Initialize Chemical scheme (including reading file):
+
+
+// Initialize Chemical scheme (including reading file):
 Chemistry m_chemistry(mNeutrals, mIons, input, report);
+
+
+
 
 // Read in the collision frequencies and other diffusion coefficients:
     read_collision_file(mNeutrals, mIons, input, report);
+cout<<"read_collision_file done"<<"\n";
+
 
     // Initialize ion temperatures from neutral temperature
     mIons.init_ion_temperature(mNeutrals, mGrid, report);
+
+cout<<"init_ion_temperature done"<<"\n";
+// system("pause");
+
 
 double dt_couple = time.get_end() - time.get_current();
 time.increment_intermediate(dt_couple);
 
 // AJR - added this stuff for one time-step:
   mGrid.calc_sza(planet, time, report);
+  
   mNeutrals.calc_mass_density(report);
+  
   mNeutrals.calc_specific_heat(report);
+
   time.calc_dt();
 
+cout<<"calc_dt done"<<"\n";
 
   iErr = calc_euv(planet,
                   mGrid,
@@ -222,6 +278,9 @@ m_chemistry.calc_chemistry(mNeutrals, mIons, time, mGrid, report);
 //	      planet,
 //	      input,
 //	      report);
+while (time.get_current() < time.get_end()) {
+
+}
 
 iErr = output(mNeutrals,
  	      mIons,
