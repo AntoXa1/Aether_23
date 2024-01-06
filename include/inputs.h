@@ -11,19 +11,29 @@ class Inputs {
 
 public:
 
-  Inputs(Times &time, Report &report);
-  int read(Times &time, Report &report);
-  bool read_inputs_json(Times &time, Report &report);
+  Inputs() {}
+  Inputs(Times &time);
+  int read(Times &time);
+  bool read_inputs_json(Times &time);
+  bool set_verbose(json in);
   int get_verbose();
   int get_verbose_proc();
   precision_t get_dt_euv();
+  bool get_include_photoelectrons();
   precision_t get_dt_report();
   precision_t get_n_outputs();
   precision_t get_dt_output(int iOutput);
   std::string get_type_output(int iOutput);
+  std::string get_diffuse_auroral_model();
+  std::string get_potential_model();
+  std::string get_electrodynamics_dir();
+  std::string get_electrodynamics_file();
+  std::string get_electrodynamics_north_file();
+  std::string get_electrodynamics_south_file();
   precision_t get_euv_heating_eff_neutrals();
   std::string get_euv_model();
   std::string get_euv_file();
+  bool get_euv_douse();
   std::string get_aurora_file();
   std::string get_chemistry_file();
   std::string get_indices_lookup_file();
@@ -35,8 +45,12 @@ public:
   std::string get_planet_species_file();
   std::string get_collision_file();
   bool get_do_calc_bulk_ion_temp();
+  precision_t get_eddy_coef();
+  precision_t get_eddy_bottom();
+  precision_t get_eddy_top();
+  bool get_use_eddy_momentum();
+  bool get_use_eddy_energy();
   std::string get_bfield_type();
-  std::string get_electrodynamics_file();
   bool get_do_restart();
   std::string get_restartout_dir();
   std::string get_restartin_dir();
@@ -45,16 +59,29 @@ public:
   int get_updated_seed();
   void set_seed(int seed);
   bool write_restart();
-  json get_perturb_values();  
+  json get_perturb_values(); 
+  bool get_do_lat_dependent_radius();
+  bool get_do_J2();
 
+  bool get_check_for_nans();
+  bool get_nan_test();
+  std::string get_nan_test_variable();
+  
   bool get_is_cubesphere();
+
+  bool get_NO_cooling();
+  bool get_O_cooling();
+
+  bool get_cent_acc();
 
   std::string get_student_name();
   bool get_is_student();
   
   json get_initial_condition_types();
   json get_boundary_condition_types();
-  
+
+  std::string get_advection_neutrals_vertical();
+
   // ------------------------------
   // Grid inputs:
 
@@ -109,10 +136,37 @@ public:
   std::vector<std::string> get_satellite_names();
   std::vector<precision_t> get_satellite_dts();
   
-  std::string get_settings_str(std::string key1);
-  std::string get_settings_str(std::string key1, std::string key2);
-  std::vector<int> get_settings_timearr(std::string key1);
-  std::vector<int> get_settings_intarr(std::string key1);
+  // General get_setting functions with error checks:
+  std::string get_setting_str(std::string key1);
+  std::string get_setting_str(std::string key1, std::string key2);
+  std::string get_setting_str(std::string key1,
+                              std::string key2,
+                              std::string key3);
+
+  json get_setting_json(std::string key1);
+  json get_setting_json(std::string key1, std::string key2);
+
+  bool get_setting_bool(std::string key1);
+  bool get_setting_bool(std::string key1, std::string key2);
+  bool get_setting_bool(std::string key1, std::string key2, std::string key3);
+
+  precision_t get_setting_float(std::string key1);
+  precision_t get_setting_float(std::string key1, std::string key2);
+
+  int64_t get_setting_int(std::string key1);
+  int64_t get_setting_int(std::string key1, std::string key2);
+
+  std::vector<int> get_setting_intarr(std::string key1);
+  std::vector<int> get_setting_timearr(std::string key1);
+
+  // Check settings functions:
+  bool check_settings(std::string key1);
+  bool check_settings(std::string key1, std::string key2);
+
+  std::string check_settings_str(std::string key1);
+  std::string check_settings_str(std::string key1, std::string key2);
+
+  precision_t check_settings_pt(std::string key1, std::string key2);
   
   /**********************************************************************
      \brief Check to see if internal state of class is ok
@@ -167,11 +221,15 @@ private:
   int updated_seed;
   
   /// An internal variable to hold the state of the class
-  bool IsOk;
+  bool isOk;
 
   int nLonsMag;
   int nLatsMag;
   int nAltsMag;
+
+  std::vector<std::string> missing_settings;
 };
+
+extern Inputs input;
 
 #endif  // INCLUDE_INPUTS_H_

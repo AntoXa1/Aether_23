@@ -3,7 +3,7 @@
 
 int64_t iProcQuery = -1;
 
-Quadtree::Quadtree(Inputs input, Report report) {
+Quadtree::Quadtree() {
   if (input.get_is_cubesphere())
     nRootNodes = 6;
   else
@@ -22,7 +22,7 @@ bool Quadtree::is_ok() {
 // build quadtree
 // --------------------------------------------------------------------------
 
-void Quadtree::build(Inputs input, Report report) {
+void Quadtree::build() {
 
   arma_mat origins;
   arma_mat rights;
@@ -315,7 +315,6 @@ int64_t Quadtree::find_point(arma_vec point, Quadtree::qtnode node) {
   return iNode;
 }
 
-
 // --------------------------------------------------------------------------
 //
 // --------------------------------------------------------------------------
@@ -368,7 +367,6 @@ arma_vec Quadtree::wrap_point_sphere(arma_vec point) {
   return wrap_point;
 
 }
-
 
 // --------------------------------------------------------------------------
 //
@@ -454,8 +452,6 @@ arma_vec Quadtree::wrap_point_cubesphere(arma_vec point) {
 
   return wrap_point;
 }
-
-
 
 // --------------------------------------------------------------------------
 //

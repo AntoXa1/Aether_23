@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """ Standard model visualization routines
 """
 
@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.cm as cm
 from netCDF4 import Dataset
+from h5py import File
 import argparse
 import os
 import json
@@ -67,6 +68,8 @@ def epoch_to_datetime(epoch_time):
 
     return dtime
 
+# ----------------------------------------------------------------------
+# Define a class for helping handle data
 
 class DataArray(np.ndarray):
     def __new__(cls, input_array, attrs={}):
@@ -435,9 +438,14 @@ def read_aether_file(filename, file_vars=None, epoch_name='time'):
 def parse_args():
 
     parser = argparse.ArgumentParser(description = 'Post process Aether files')
+    parser.add_argument('-hdf5', \
+                        help='output HDF5 files', \
+                        action="store_true")
     parser.add_argument('-rm', \
                         help='removes processed files', \
                         action="store_true")
+    parser.add_argument('-alt', default = 2, type = int, \
+                        help='altitude to plot (-1 for no plot!)')
     parser.add_argument('-v', \
                         help='turn on verbose mode', \
                         action="store_true")
@@ -749,6 +757,52 @@ def write_netcdf(allBlockData, fileName, isVerbose = True):
     ncfile.close()
 
 #----------------------------------------------------------------------------
+# Write a hdf5 file from the data
+#----------------------------------------------------------------------------
+
+def write_hdf5(allBlockData, fileName, isVerbose = True):
+
+    if (isVerbose):
+        print('    Outputting file : ', fileName)
+    hdf5file = File(fileName, 'w')
+
+    nBlocks = len(allBlockData)
+    nLons, nLats, nZ = get_sizes(allBlockData)
+
+    lon_dim = hdf5file.create_dataset('nlons', data = [nLons])
+    lat_dim = hdf5file.create_dataset('nlats', data = [nLats])
+    z_dim = hdf5file.create_dataset('nalts', data =[nZ])
+    block_dim = hdf5file.create_dataset('nblocks', data = [nBlocks])
+
+    oneBlock = allBlockData[0]
+
+    time_out = [datetime_to_epoch(oneBlock["time"])]
+    hdf5file.create_dataset('time', data = time_out, dtype = np.float64)
+        
+    allHDF5Datasets = []
+    # create all of the variables
+    varList = []
+    for iV, v in enumerate(oneBlock['vars']):
+        if (v == 'alt'):
+            v = 'z'
+        varList.append(v)
+        if ('long_name' in oneBlock):
+            longName = oneBlock['long_name'][iV]
+        else:
+            longName = v
+        unitName = oneBlock['units'][iV]
+        allHDF5Datasets.append(hdf5file.create_dataset(v, dtype = np.float32, \
+                                        shape = (nBlocks, nLons, nLats, nZ)))
+        allHDF5Datasets[-1].units = unitName
+        allHDF5Datasets[-1].long_name = longName
+
+        for iB, oneBlock in enumerate(allBlockData):
+            tmp = np.asarray(oneBlock[iV])
+            allHDF5Datasets[-1][iB,:,:,:] = tmp
+        
+    hdf5file.close()
+
+#----------------------------------------------------------------------------
 # copy block data in one file
 #----------------------------------------------------------------------------
 
@@ -868,15 +922,22 @@ def write_and_plot_data(dataToWrite,
                         fileAddon,
                         iVar,
                         iAlt,
+                        output_netcdf,
                         isVerbose = True):
 
-    netcdfFile = fileStart + fileAddon + '.nc'
-    print('  --> Outputting nc file : ', netcdfFile)
-    write_netcdf(dataToWrite, netcdfFile, isVerbose = isVerbose)
+    if output_netcdf:
+        netcdfFile = fileStart + fileAddon + '.nc'
+        print('  --> Outputting nc file : ', netcdfFile)
+        write_netcdf(dataToWrite, netcdfFile, isVerbose = isVerbose)
+    else:
+        hdf5File = fileStart + fileAddon + '.hdf5'
+        print('  --> Outputting hdf5 file : ', hdf5File)
+        write_hdf5(dataToWrite, hdf5File, isVerbose = isVerbose)
 
-    plotFile = fileStart + fileAddon + '.png'
-    var = dataToWrite[0]['vars'][iVar]
-    plot_all_blocks(dataToWrite, var, iAlt, plotFile)
+    if (iAlt > -1):
+        plotFile = fileStart + fileAddon + '.png'
+        var = dataToWrite[0]['vars'][iVar]
+        plot_all_blocks(dataToWrite, var, iAlt, plotFile)
 
     return
 
@@ -893,7 +954,9 @@ if __name__ == '__main__':  # main code block
     filesInfo = get_base_files()
 
     iVar = 3
-    iAlt = 10
+    iAlt = args.alt
+
+    output_netcdf = False if args.hdf5 else True
 
     for iFile, fileInfo in enumerate(filesInfo):
         coreFile = fileInfo['coreFile']
@@ -903,7 +966,7 @@ if __name__ == '__main__':  # main code block
                                                   isVerbose = isVerbose)
 
         write_and_plot_data(allBlockData, coreFile, '', iVar, iAlt,
-                            isVerbose = isVerbose)
+                            output_netcdf, isVerbose = isVerbose)
     
         if (fileInfo['isEnsemble']):
             factor = 1.0 / float(fileInfo['ensembleMembers'])
@@ -919,13 +982,13 @@ if __name__ == '__main__':  # main code block
             if (fileInfo['ensembleNumber'] == fileInfo['ensembleMembers']):
     
                 write_and_plot_data(ensembleData, fileInfo['ensembleFile'],
-                                    '_mean', iVar, iAlt)
+                                    '_mean', iVar, iAlt, output_netcdf)
                 
-                stdData = calc_std_of_ensembles(filesInfo,
-                                                ensembleIndexList,
-                                                ensembleData)
-                write_and_plot_data(stdData, fileInfo['ensembleFile'],
-                                    '_std', iVar, iAlt)
+                #stdData = calc_std_of_ensembles(filesInfo,
+                #                                ensembleIndexList,
+                #                                ensembleData)
+                #write_and_plot_data(stdData, fileInfo['ensembleFile'],
+                #                    '_std', iVar, iAlt, output_netcdf)
                             
         if (args.rm):
             print('  --> Removing files ...')

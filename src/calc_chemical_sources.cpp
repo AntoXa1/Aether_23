@@ -17,8 +17,7 @@
 // -----------------------------------------------------------------------------
 
 void Chemistry::calc_chemical_sources(Neutrals &neutrals,
-                                      Ions &ions,
-                                      Report &report) {
+                                      Ions &ions) {
 
   std::string function = "Chemistry::calc_chemical_sources";
   static int iFunction = -1;
@@ -40,7 +39,7 @@ void Chemistry::calc_chemical_sources(Neutrals &neutrals,
 
   for (iReaction = 0; iReaction < nReactions; iReaction++) {
 
-    if (report.test_verbose(3)) {
+    if (report.test_verbose(4)) {
       std::cout << "===> Reaction : " << iReaction
                 << " of " << nReactions << "\n";
       display_reaction(reactions[iReaction]);
@@ -56,17 +55,17 @@ void Chemistry::calc_chemical_sources(Neutrals &neutrals,
 
     change3d.fill(rate);
 
-    // check for type of temperature dependence and calculate
+    // Check for type of temperature dependence and calculate
     if (reactions[iReaction].type > 0) {
       // Determined which temperature to use in equation:
-      // use Ti by default
-      arma_cube temp = ions.temperature_scgc;
+      // use Tn by default
+      arma_cube temp = neutrals.temperature_scgc;
       std::string denom = reactions[iReaction].denominator;
 
       if (denom == "Te")
         temp = ions.electron_temperature_scgc;
-      else if (denom == "Tn")
-        temp = neutrals.temperature_scgc;
+      else if (denom == "Ti")
+        temp = ions.temperature_scgc;
 
       // Calculate reaction rate:
       if (reactions[iReaction].numerator &&
@@ -113,7 +112,7 @@ void Chemistry::calc_chemical_sources(Neutrals &neutrals,
       }
     }
 
-    // if temperature dependence is piecewise, only operate on cells
+    // If temperature dependence is piecewise, only operate on cells
     // within temperature range:
     if (reactions[iReaction].min || reactions[iReaction].max) {
       // Figure out which temperature is the limiter.  Default to ions:

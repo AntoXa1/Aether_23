@@ -38,5 +38,6 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 
-.vscode/*.json
-
+#vs code settings
+.vscode
+.DS_Store

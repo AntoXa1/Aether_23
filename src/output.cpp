@@ -4,7 +4,6 @@
 // #include <netcdf>
 
 #include "aether.h"
-//#include "output.cpp"
 
 /* ---------------------------------------------------------------------
 
@@ -20,13 +19,11 @@
 //  Fills output containers and outputs them for common output types
 // -----------------------------------------------------------------------------
 
-int output(const Neutrals &neutrals,
-           const Ions &ions,
-           const Grid &grid,
-           Times time,
-           const Planets &planet,
-           Inputs args,
-           Report &report) {
+bool output(const Neutrals &neutrals,
+            const Ions &ions,
+            const Grid &grid,
+            Times time,
+            const Planets &planet) {
 
   std::string function = "output";
   static int iFunction = -1;
@@ -34,9 +31,9 @@ int output(const Neutrals &neutrals,
 
   static bool IsFirstTime = true;
 
-  int iErr = 0;
+  bool didWork = true;
 
-  int nOutputs = args.get_n_outputs();
+  int nOutputs = input.get_n_outputs();
   static std::vector<OutputContainer> AllOutputContainers;
 
   if (IsFirstTime) {
@@ -53,20 +50,20 @@ int output(const Neutrals &neutrals,
     IsFirstTime = false;
   }
 
-  report.student_checker_function_name(args.get_is_student(),
-                                       args.get_student_name(),
+  report.student_checker_function_name(input.get_is_student(),
+                                       input.get_student_name(),
                                        3, "");
 
   for (int iOutput = 0; iOutput < nOutputs; iOutput++) {
 
-    if (time.check_time_gate(args.get_dt_output(iOutput))) {
+    if (time.check_time_gate(input.get_dt_output(iOutput))) {
 
       // ------------------------------------------------------------
       // Store time in all of the files:
 
       AllOutputContainers[iOutput].set_time(time.get_current());
 
-      std::string type_output = args.get_type_output(iOutput);
+      std::string type_output = input.get_type_output(iOutput);
 
       // ------------------------------------------------------------
       // Put Lon, Lat, Alt into all output containers:
@@ -115,7 +112,7 @@ int output(const Neutrals &neutrals,
           type_output == "states")
         for (int iSpecies = 0; iSpecies < neutrals.nSpecies; iSpecies++)
           AllOutputContainers[iOutput].
-          store_variable(neutrals.species[iSpecies].cName,
+          store_variable("density_" + neutrals.species[iSpecies].cName,
                          neutrals.density_unit,
                          neutrals.species[iSpecies].density_scgc);
 
@@ -123,25 +120,35 @@ int output(const Neutrals &neutrals,
       if (type_output == "neutrals" ||
           type_output == "states")
         AllOutputContainers[iOutput].
-        store_variable(neutrals.temperature_name,
+        store_variable(neutrals.temperature_name + "_neutral",
                        neutrals.temperature_unit,
                        neutrals.temperature_scgc);
 
-      // Neutral Winds:
+      // Bulk Neutral Winds:
       if (type_output == "neutrals" ||
           type_output == "states")
         for (int iDir = 0; iDir < 3; iDir++)
           AllOutputContainers[iOutput].
-          store_variable(neutrals.velocity_name[iDir],
+          store_variable(neutrals.velocity_name[iDir] + "_neutral",
                          neutrals.velocity_unit,
                          neutrals.velocity_vcgc[iDir]);
+
+      // Neutral Species Winds:
+      if (type_output == "neutrals")
+        for (int iSpecies = 0; iSpecies < neutrals.nSpecies; iSpecies++)
+          for (int iDir = 0; iDir < 3; iDir++)
+            AllOutputContainers[iOutput].
+            store_variable(neutrals.velocity_name[iDir] + "_" +
+                           neutrals.species[iSpecies].cName,
+                           neutrals.velocity_unit,
+                           neutrals.species[iSpecies].velocity_vcgc[iDir]);
 
       // Ion Densities:
       if (type_output == "ions" ||
           type_output == "states")
         for (int iSpecies = 0; iSpecies <= ions.nSpecies; iSpecies++)
           AllOutputContainers[iOutput].
-          store_variable(ions.species[iSpecies].cName,
+          store_variable("density_" + ions.species[iSpecies].cName,
                          ions.density_unit,
                          ions.species[iSpecies].density_scgc);
 
@@ -150,23 +157,22 @@ int output(const Neutrals &neutrals,
           type_output == "states")
         for (int iSpecies = 0; iSpecies <= ions.nSpecies; iSpecies++)
           AllOutputContainers[iOutput].
-          store_variable(ions.species[iSpecies].cName + " " + ions.temperature_name,
+          store_variable(ions.temperature_name + "_" +
+                         ions.species[iSpecies].cName,
                          ions.temperature_unit,
                          ions.species[iSpecies].temperature_scgc);
 
       // Bulk Ion Temperature:
       if (type_output == "ions" ||
           type_output == "states")
-        AllOutputContainers[iOutput].store_variable("Bulk Ion " +
-                                                    ions.temperature_name,
+        AllOutputContainers[iOutput].store_variable(ions.temperature_name + "_ion",
                                                     ions.temperature_unit,
                                                     ions.temperature_scgc);
 
       // Bulk Ion Drifts:
       if (type_output == "states")
         for (int iDir = 0; iDir < 3; iDir++)
-          AllOutputContainers[iOutput].store_variable("Bulk " +
-                                                      ions.velocity_name[iDir],
+          AllOutputContainers[iOutput].store_variable(ions.velocity_name[iDir] + "_ion",
                                                       ions.velocity_unit,
                                                       ions.velocity_vcgc[iDir]);
 
@@ -176,6 +182,36 @@ int output(const Neutrals &neutrals,
         AllOutputContainers[iOutput].store_variable(ions.potential_name,
                                                     ions.potential_unit,
                                                     ions.potential_scgc);
+
+      if (type_output == "gravity") {
+        AllOutputContainers[iOutput].store_variable("glat",
+                                                    "grav Latitude",
+                                                    "degrees",
+                                                    grid.geoLat_scgc * cRtoD);
+        AllOutputContainers[iOutput].store_variable("glon",
+                                                    "grav Longitude",
+                                                    "degrees",
+                                                    grid.geoLon_scgc * cRtoD);
+        AllOutputContainers[iOutput].store_variable("lt",
+                                                    "Local Time",
+                                                    "hours",
+                                                    grid.geoLocalTime_scgc);
+        AllOutputContainers[iOutput].store_variable("Geast",
+                                                    "m/s^2",
+                                                    grid.gravity_vcgc[0]);
+        AllOutputContainers[iOutput].store_variable("Gnorth",
+                                                    "m/s^2",
+                                                    grid.gravity_vcgc[1]);
+        AllOutputContainers[iOutput].store_variable("Gvertical",
+                                                    "m/s^2",
+                                                    grid.gravity_vcgc[2]);
+        AllOutputContainers[iOutput].store_variable("Gpotential",
+                                                    "m^2/s^2",
+                                                    grid.gravity_potential_scgc);
+        AllOutputContainers[iOutput].store_variable("radius",
+                                                    "m",
+                                                    grid.radius_scgc);
+      }
 
       if (type_output == "bfield") {
         AllOutputContainers[iOutput].store_variable("mlat",
@@ -201,6 +237,33 @@ int output(const Neutrals &neutrals,
                                                     grid.bfield_vcgc[2]);
       }
 
+      // Thermal:
+      if (type_output == "therm") {
+        AllOutputContainers[iOutput].store_variable("O Rad Cooling",
+                                                    "[O] Radiative Cooling",
+                                                    "K/s",
+                                                    neutrals.O_cool_scgc);
+        AllOutputContainers[iOutput].store_variable("NO Rad Cooling",
+                                                    "[NO] Radiative Cooling",
+                                                    "K/s",
+                                                    neutrals.NO_cool_scgc);
+      }
+
+      if (type_output == "moment") {
+        AllOutputContainers[iOutput].store_variable("accel_cent_east",
+                                                    "Logitudinal Centripetal Acceleration",
+                                                    "m/s^2",
+                                                    grid.cent_acc_vcgc[0]);
+        AllOutputContainers[iOutput].store_variable("accel_cent_north",
+                                                    "Latitudinal Centripetal Acceleration",
+                                                    "m/s^2",
+                                                    grid.cent_acc_vcgc[1]);
+        AllOutputContainers[iOutput].store_variable("accel_cent_up",
+                                                    "Radial Centripetal Acceleration",
+                                                    "m/s^2",
+                                                    grid.cent_acc_vcgc[2]);
+      }
+
       // ------------------------------------------------------------
       // Set output file names
 
@@ -218,17 +281,27 @@ int output(const Neutrals &neutrals,
       if (type_output == "bfield")
         filename = "3DBFI_";
 
+      if (type_output == "moment")
+        filename = "3DMMT_";
+
+      if (type_output == "gravity")
+        filename = "3DGRA_";
+
+      if (type_output == "moment")
+        filename = "3DMMT_";
+
       if (type_output == "corners")
         filename = "3DCOR_";
+
+      if (type_output == "therm")
+        filename = "3DTHR_";
 
       filename = filename + time.get_YMD_HMS();
 
       if (nMembers > 1)
         filename = filename + "_" + cMember;
 
-
       filename = filename + "_" + cGrid;
-
 
       report.print(0, "Writing file : " + filename);
       AllOutputContainers[iOutput].set_filename(filename);
@@ -236,7 +309,10 @@ int output(const Neutrals &neutrals,
       // ------------------------------------------------------------
       // write output container
 
-      AllOutputContainers[iOutput].write();
+      if (!AllOutputContainers[iOutput].write()) {
+        report.error("Error in writing output container!");
+        didWork = false;
+      }
 
       // ------------------------------------------------------------
       // Clear variables for next time
@@ -246,9 +322,8 @@ int output(const Neutrals &neutrals,
   }
 
   report.exit(function);
-  return iErr;
+  return didWork;
 }
-
 
 /* ---------------------------------------------------------------------
 
@@ -435,19 +510,21 @@ OutputContainer::OutputContainer() {
 // the user wants, and then output that particular type.
 // -----------------------------------------------------------------------------
 
-void OutputContainer::write() {
+bool OutputContainer::write() {
 
-  int iErr = 0;
+  bool didWork = true;
 
   if (output_type == binary_type) {
-    iErr = write_container_header();
+    didWork = write_container_header();
 
-    if (iErr == 0)
-      iErr = write_container_binary();
+    if (didWork)
+      didWork = write_container_binary();
   }
 
   if (output_type == netcdf_type)
-    iErr = write_container_netcdf();
+    didWork = write_container_netcdf();
+
+  return didWork;
 }
 
 // -----------------------------------------------------------------------------
@@ -484,9 +561,9 @@ void OutputContainer::display() {
 // formatted file.
 // -----------------------------------------------------------------------------
 
-int OutputContainer::write_container_header() {
+bool OutputContainer::write_container_header() {
 
-  int iErr = 0;
+  bool didWork = true;
   int64_t nVars = elements.size();
   int64_t nX = elements[0].value.n_rows;
   int64_t nY = elements[0].value.n_cols;
@@ -518,12 +595,11 @@ int OutputContainer::write_container_header() {
     file << header.dump(4) << "\n";
     file.close();
   } catch (...) {
-    std::cout << "Error writing header file : "
-              << whole_filename << "\n";
-    iErr = 1;
+    report.error("Error writing header file : " + whole_filename);
+    didWork = false;
   }
 
-  return iErr;
+  return didWork;
 }
 
 //----------------------------------------------------------------------
@@ -569,9 +645,9 @@ void output_binary_3d(std::ofstream &binary,
 // dump the contents of the container out into a binary file
 // -----------------------------------------------------------------------------
 
-int OutputContainer::write_container_binary() {
+bool OutputContainer::write_container_binary() {
 
-  int iErr = 0;
+  bool didWork = true;
   std::ofstream binary;
   std::string whole_filename = directory + "/" + filename + ".bin";
 
@@ -583,19 +659,15 @@ int OutputContainer::write_container_binary() {
     for (int64_t iVar = 0; iVar < nVars; iVar++)
       output_binary_3d(binary, elements[iVar].value);
 
-    return iErr;
+    return didWork;
   } catch (...) {
-    std::cout << "Error writing header file : "
-              << whole_filename << "\n";
-    iErr = 1;
+    report.error("Error writing binary file : " + whole_filename);
+    didWork = false;
   }
 
-  return iErr;
+  return didWork;
 }
 
-
-
-
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
@@ -603,5 +675,3 @@ int OutputContainer::write_container_binary() {
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-
-

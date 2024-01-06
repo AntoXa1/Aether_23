@@ -30,22 +30,18 @@
   * param chemistry the class that contains all of the info about chemistry
   * param electrodynamics the class that contains all of the electrodynamics
   * param indices the class that contains all of the indices
-  * param input info about how user has configured things
-  * param report allow reporting to occur
  **/
 
 
-int advance(Planets &planet,
-            Grid &gGrid,
-            Times &time,
-            Euv &euv,
-            Neutrals &neutrals,
-            Ions &ions,
-            Chemistry &chemistry,
-            Electrodynamics &electrodynamics,
-            Indices &indices,
-            Inputs &args,
-            Report &report,
-            Logfile &logfile);
+bool advance(Planets &planet,
+	     Grid &gGrid,
+	     Times &time,
+	     Euv &euv,
+	     Neutrals &neutrals,
+	     Ions &ions,
+	     Chemistry &chemistry,
+	     Electrodynamics &electrodynamics,
+	     Indices &indices,
+	     Logfile &logfile);
 
 #endif // INCLUDE_ADVANCE_H_

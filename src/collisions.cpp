@@ -9,8 +9,7 @@
 // read in from the CSV file.
 // -----------------------------------------------------------------------------
 
-void calc_ion_neutral_coll_freq(Neutrals &neutrals, Ions &ions,
-                                Report &report) {
+void calc_ion_neutral_coll_freq(Neutrals &neutrals, Ions &ions) {
 
   std::string function = "calc_ion_neutral_coll_freq";
   static int iFunction = -1;
@@ -38,10 +37,10 @@ void calc_ion_neutral_coll_freq(Neutrals &neutrals, Ions &ions,
           ions.species[iIon].nu_ion_neutral_vcgc[iNeutral] =
             ions.species[iIon].nu_ion_neutral_coef[iNeutral] *
             neutrals.species[iNeutral].density_scgc;
-        }
-      }
-    }
-  }
+        } // is resonant
+      } // for neutrals
+    } // if size > 0
+  } // for ions
 
   report.exit(function);
   return;

@@ -4,6 +4,28 @@
 #ifndef INCLUDE_ELECTRODYNAMICS_H_
 #define INCLUDE_ELECTRODYNAMICS_H_
 
+extern "C" void ie_init_library(int[], int[], int[], int* iError);
+extern "C" void ie_set_nxs(int *nXsIn);
+extern "C" void ie_set_nys(int *nYsIn);
+extern "C" void ie_set_time(double *TimeIn);
+extern "C" void ie_set_imfbz(float *IMFBzIn);
+extern "C" void ie_set_imfby(float *IMFByIn);
+extern "C" void ie_set_swv(float *SWVIn);
+extern "C" void ie_set_swn(float *SWNIn);
+extern "C" void ie_set_au(float *AUIn);
+extern "C" void ie_set_al(float *ALIn);
+extern "C" void ie_set_ae(float *AEIn);
+extern "C" void ie_set_hp_from_ae(float *AEIn);
+extern "C" void ie_set_north();
+extern "C" void ie_set_south();
+extern "C" void ie_set_mlts(float[], int *iError);
+extern "C" void ie_set_lats(float[], int *iError);
+extern "C" void ie_update_grid(int *iError);
+extern "C" void ie_get_potential(float[], int *iError);
+extern "C" void ie_get_eflux(float[], int *iError);
+extern "C" void ie_get_avee(float[], int *iError);
+extern "C" void ie_get_electron_diffuse_aurora(float[], float[], int *iError);
+
 /**************************************************************
  * This is the electrodynamics class for Aether.
 
@@ -32,16 +54,9 @@ class Electrodynamics {
 
      This does the following:
      - initialize all variables to missing values
-     - read in file if it exists
-
-     \param input Need to pass Input class, so code can get info
-                  about how user has configured things. Inside
-                  input, the function uses .efield_model, .auroral_model,
-                  .electrodynamics_file.
-
-     \param report Need to pass Report class, so reporting can occur  
+     - read in file if it exists 
    **/
-  Electrodynamics(Times time, Inputs input, Report &report);
+  Electrodynamics(Times time);
 
   /**************************************************************
      \brief update the potential and aurora
@@ -49,15 +64,15 @@ class Electrodynamics {
      \param gGrid need grid
      \param time need current time
      \param ions Going to set the potential and aurora
-     \param report Need to pass Report class, so reporting can occur  
    **/
   
-  int update(Planets planet,
-	     Grid gGrid,
-	     Times time,
-	     Ions &ions,
-	     Report &report);
-  
+  bool update(Planets planet,
+	      Grid gGrid,
+	      Times time,
+        Indices &indices,
+        Ions &ions);
+
+
   /**************************************************************
      \brief used in main.cpp to ensure electrodynamics times and
       aether input times match up. Returns false if times are
@@ -83,15 +98,13 @@ class Electrodynamics {
      \brief used in advance.cpp to get potential, eflux, avee
      \param magLat magnetic latitude
      \param magLocalTime magnetic local time
-     \param report reporting
    **/
 
   std::tuple<arma_cube,
 	     arma_mat,
 	     arma_mat> get_electrodynamics(arma_cube magLat,
-					   arma_cube magLocalTime,
-					   Report &report);
-  
+					   arma_cube magLocalTime);
+
   /**************************************************************
      \brief Gets interpolation indices
 
@@ -113,10 +126,9 @@ class Electrodynamics {
        is done for all relavant grids.
 
      \param time the time requested.
-     \param report Need to pass Report class, so reporting can occur  
    **/
   
-  void set_time(double time, Report &report);
+  void set_time(double time);
 
   /**************************************************************
      \brief Sets the current grid to request data on
@@ -126,10 +138,8 @@ class Electrodynamics {
 
      \param lats a 2D matrix of magnetic latitudes to interpolate to
      \param mlts a 2D matrix of magnetic local times to interpolate to
-     \param report Need to pass Report class, so reporting can occur  
    **/
-  void set_grid(arma_mat lats, arma_mat mlts, Report &report);
-
+  void set_grid(arma_mat lats, arma_mat mlts);
 
   /**************************************************************
      \brief Set the IMF Bx for internal usage
@@ -219,12 +229,10 @@ class Electrodynamics {
      - creates an empty potential matrix ok, I see to return
      - Loops through the grids in priority order calling set_values
        with the potentials in the grids
-
-     \param report Need to pass Report class, so reporting can occur  
    **/
   arma_cube get_potential(arma_cube magLat,
-			  arma_cube magLocalTime,
-			  Report &report);
+			  arma_cube magLocalTime);
+
   /**************************************************************
      \brief Get 2D electron energy flux on specified grid
 
@@ -236,12 +244,8 @@ class Electrodynamics {
      - creates an empty eflux matrix to return
      - Loops through the grids in priority order calling set_values
        with the eflux in the grids
-
-     \param report Need to pass Report class, so reporting can occur  
    **/
-
-  arma_mat get_eflux(arma_cube magLat, arma_cube magLocalTime, Report &report);
-
+  arma_mat get_eflux(arma_cube magLat, arma_cube magLocalTime);
 
   /**************************************************************
      \brief Get 2D electron average energy on specified grid
@@ -254,12 +258,8 @@ class Electrodynamics {
      - creates an empty avee matrix to return
      - Loops through the grids in priority order calling set_values
        with the avee in the grids
-
-     \param report Need to pass Report class, so reporting can occur  
    **/
-
-  arma_mat get_avee(arma_cube magLat, arma_cube magLocalTime, Report &report);
-
+  arma_mat get_avee(arma_cube magLat, arma_cube magLocalTime);
 
   /**************************************************************
      \brief Get 2D ion energy flux on specified grid
@@ -272,12 +272,8 @@ class Electrodynamics {
      - creates an empty ion eflux matrix to return
      - Loops through the grids in priority order calling set_values
        with the ion eflux in the grids
-
-     \param report Need to pass Report class, so reporting can occur  
    **/
-
-  arma_mat get_ion_eflux(Report &report);
-
+  arma_mat get_ion_eflux();
 
   /**************************************************************
      \brief Get 2D ion average energy on specified grid
@@ -290,12 +286,8 @@ class Electrodynamics {
      - creates an empty ion avee matrix to return
      - Loops through the grids in priority order calling set_values
        with the ion avee in the grids
-
-     \param report Need to pass Report class, so reporting can occur  
    **/
-
-  arma_mat get_ion_avee(Report &report);
-
+  arma_mat get_ion_avee();
   
   /**********************************************************************
      \brief Check to see if internal state of class is ok
@@ -322,7 +314,8 @@ class Electrodynamics {
   std::string input_file;
 
   ///
-  bool HaveElectrodynamics;
+  bool HaveElectrodynamicsFile;
+  bool HaveFortranIe;
 
   /// Variables needed by user - all set by set_ functions:
 
@@ -350,6 +343,14 @@ class Electrodynamics {
   precision_t ae_needed;
   precision_t kp_needed;
 
+  // In the coupling to the Fortran IE routines, we need some variables
+  // that are allocatable:
+  float *mlt2d;
+  float *lat2d;
+  float *pot2d;
+  float *eflux2d;
+  float *avee2d;
+  bool IsAllocated = false;
 
   /// If we read in an electrodyanmics file, set this to 1. Otherwise,
   /// set it to 0:
@@ -484,10 +485,8 @@ class Electrodynamics {
      should be put into the input_electrodynamics structure.
 
      \param filename
-     \param report Need to pass Report class, so reporting can occur
    **/
-  void read_netcdf_electrodynamics_file(std::string filename,
-					Report &report);
+  void read_netcdf_electrodynamics_file(std::string filename);
 
   /**************************************************************
      \brief Takes the pot/eflux/avee/etc and interpolates to the grid
@@ -517,6 +516,8 @@ class Electrodynamics {
   
 
   arma_mat get_values(arma_mat matToInterpolateOn, int rows, int cols);
+
+  void set_all_indices_for_ie(Times time, Indices &indices);
 
 };
 

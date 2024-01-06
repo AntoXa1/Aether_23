@@ -13,39 +13,55 @@
 //   - calculate ionization and heating
 // -----------------------------------------------------------------------------
 
-int calc_euv(Planets planet,
-             Grid grid,
-             Times time,
-             Euv &euv,
-             Neutrals &neutrals,
-             Ions &ions,
-             Indices indices,
-             Inputs input,
-             Report &report) {
+bool calc_euv(Planets planet,
+              Grid grid,
+              Times time,
+              Euv &euv,
+              Neutrals &neutrals,
+              Ions &ions,
+              Indices indices) {
 
-  int iErr = 0;
+  bool didWork = true;
 
-  if (time.check_time_gate(input.get_dt_euv())) {
-    std::string function = "Euv::calc_euv";
-    static int iFunction = -1;
-    report.enter(function, iFunction);
+  if (!time.check_time_gate(input.get_dt_euv()))
+    return true;
 
-    if (input.get_is_student())
-      report.print(-1, "(2) What function is this " +
-                   input.get_student_name() + "?");
+  std::string function = "Euv::calc_euv";
+  static int iFunction = -1;
+  report.enter(function, iFunction);
 
-    // Chapman integrals for EUV energy deposition:
-    neutrals.calc_chapman(grid, report);
+  if (input.get_is_student())
+    report.print(-1, "(2) What function is this " +
+                 input.get_student_name() + "?");
 
-    iErr = euv.euvac(time, indices, report);
-    iErr = euv.scale_from_1au(planet, time, report);
+  // Chapman integrals for EUV energy deposition:
+  // Need chapman integrals for aurora too!
+  neutrals.calc_chapman(grid);
 
-    calc_ionization_heating(euv, neutrals, ions, report);
+  if (euv.doUse) {
+    // set didWork to false in order to catch bad euv models:
+    didWork = false;
+    std::string euvModel = mklower(input.get_euv_model());
 
-    report.exit(function);
-  }
+    if (euvModel == "euvac")
+      didWork = euv.euvac(time, indices);
+    else if (euvModel == "neuvac")
+      didWork = euv.neuvac(time, indices);
+    else if (euvModel == "hfg")
+      didWork = euv.solomon_hfg(time, indices);
 
-  return iErr;
+    if (didWork)
+      euv.scale_from_1au(planet, time);
+
+    calc_ionization_heating(euv, neutrals, ions);
+  } else
+    neutrals.heating_euv_scgc.zeros();
+
+  if (!didWork)
+    report.error("Error in calc_euv!  Check euv models.");
+
+  report.exit(function);
+  return didWork;
 }
 
 // -----------------------------------------------------------------------------
@@ -54,8 +70,7 @@ int calc_euv(Planets planet,
 
 void calc_ionization_heating(Euv euv,
                              Neutrals &neutrals,
-                             Ions &ions,
-                             Report &report) {
+                             Ions &ions) {
 
   int64_t iAlt, iWave, iSpecies;
   int i_, iIon, iIonization;
@@ -79,6 +94,8 @@ void calc_ionization_heating(Euv euv,
   arma_mat tau2d = neutrals.heating_euv_scgc.slice(0);
   arma_mat intensity2d = neutrals.heating_euv_scgc.slice(0);
   arma_mat ionization2d = neutrals.heating_euv_scgc.slice(0);
+
+  int64_t iPei, j_;
 
   for (iAlt = 2; iAlt < nAlts - 2; iAlt++) {
     for (iWave = 0; iWave < euv.nWavelengths; iWave++) {
@@ -120,6 +137,18 @@ void calc_ionization_heating(Euv euv,
             euv.waveinfo[i_].values[iWave] *  // cross section
             intensity2d %
             neutrals.species[iSpecies].density_scgc.slice(iAlt);
+
+          // Test for an augmentation due to photo-electrons:
+
+          for (iPei = 0;
+               iPei < neutrals.species[iSpecies].nEuvPeiSpecies;
+               iPei++) {
+            if (neutrals.species[iSpecies].iEuvIonSpecies_[iPei] ==
+                neutrals.species[iSpecies].iEuvIonSpecies_[iIonization]) {
+              j_ = neutrals.species[iSpecies].iEuvIonId_[iPei];
+              ionization2d[iWave] *= (1 + euv.waveinfo[j_].values[iWave]);
+            }
+          }
 
           neutrals.species[iSpecies].ionization_scgc.slice(iAlt) =
             neutrals.species[iSpecies].ionization_scgc(iAlt) + ionization2d;

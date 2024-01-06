@@ -16,25 +16,32 @@
 //              file and fill with hydrostatic.
 // -----------------------------------------------------------------------------
 
-
 //----------------------------------------------------------------------
 // set_bcs - This is for setting the vertical BCs
 //----------------------------------------------------------------------
 
 bool Neutrals::set_bcs(Grid grid,
                        Times time,
-                       Indices indices,
-                       Inputs input,
-                       Report &report) {
+                       Indices indices) {
 
   std::string function = "Neutrals::set_bcs";
   static int iFunction = -1;
   report.enter(function, iFunction);
 
-  bool didWork;
+  bool didWork = true;
 
-  didWork = set_lower_bcs(grid, time, indices, input, report);
-  didWork = set_upper_bcs(grid, input, report);
+  if (input.get_nAltsGeo() > 1) {
+    didWork = set_lower_bcs(grid, time, indices);
+
+    if (didWork)
+      didWork = set_upper_bcs(grid);
+
+    if (didWork)
+      calc_mass_density();
+  }
+
+  if (!didWork)
+    report.error("issue with BCs!");
 
   report.exit(function);
   return didWork;
@@ -44,9 +51,7 @@ bool Neutrals::set_bcs(Grid grid,
 // set lower boundary conditions for the neutrals
 //----------------------------------------------------------------------
 
-bool Neutrals::set_upper_bcs(Grid grid,
-                             Inputs input,
-                             Report &report) {
+bool Neutrals::set_upper_bcs(Grid grid) {
 
   std::string function = "Neutrals::set_upper_bcs";
   static int iFunction = -1;
@@ -54,10 +59,43 @@ bool Neutrals::set_upper_bcs(Grid grid,
 
   bool didWork = true;
 
-  int64_t nAlts = temperature_scgc.n_slices;
+  int64_t nAlts = grid.get_nZ();
+  int64_t nX = grid.get_nX(), iX;
+  int64_t nY = grid.get_nY(), iY;
+  int64_t nGCs = grid.get_nGCs();
+  int64_t iAlt;
+  arma_mat h;
 
-  temperature_scgc.slice(nAlts - 2) = temperature_scgc.slice(nAlts - 3);
-  temperature_scgc.slice(nAlts - 1) = temperature_scgc.slice(nAlts - 2);
+  for (iAlt = nAlts - nGCs; iAlt < nAlts; iAlt++) {
+
+    // Bulk Quantities:
+    temperature_scgc.slice(iAlt) = temperature_scgc.slice(iAlt - 1);
+    velocity_vcgc[0].slice(iAlt) = velocity_vcgc[0].slice(iAlt - 1);
+    velocity_vcgc[1].slice(iAlt) = velocity_vcgc[1].slice(iAlt - 1);
+
+    // For each species:
+    for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
+      // Horizontal velocities - zero gradient:
+      species[iSpecies].velocity_vcgc[0].slice(iAlt) =
+        species[iSpecies].velocity_vcgc[0].slice(iAlt - 1);
+      species[iSpecies].velocity_vcgc[1].slice(iAlt) =
+        species[iSpecies].velocity_vcgc[1].slice(iAlt - 1);
+
+      // Allow upflow, but not downflow:
+      for (iX = nGCs; iX < nX - nGCs; iX++)
+        for (iY = nGCs; iY < nY - nGCs; iY++)
+          if (species[iSpecies].velocity_vcgc[2](iX, iY, iAlt - 1) > 0)
+            species[iSpecies].velocity_vcgc[2](iX, iY, iAlt) =
+              species[iSpecies].velocity_vcgc[2](iX, iY, iAlt - 1);
+          else
+            species[iSpecies].velocity_vcgc[2](iX, iY, iAlt) = 0.0;
+
+      h = species[iSpecies].scale_height_scgc.slice(iAlt);
+      species[iSpecies].density_scgc.slice(iAlt) =
+        species[iSpecies].density_scgc.slice(iAlt - 1) %
+        exp(-grid.dalt_lower_scgc.slice(iAlt) / h);
+    }
+  }
 
   report.exit(function);
   return didWork;
@@ -69,36 +107,40 @@ bool Neutrals::set_upper_bcs(Grid grid,
 
 bool Neutrals::set_lower_bcs(Grid grid,
                              Times time,
-                             Indices indices,
-                             Inputs input,
-                             Report &report) {
+                             Indices indices) {
 
   std::string function = "Neutrals::set_lower_bcs";
   static int iFunction = -1;
   report.enter(function, iFunction);
 
-  bool didWork = true;
+  bool didWork = false;
 
   json bcs = input.get_boundary_condition_types();
+  int64_t nGCs = grid.get_nGCs();
+  int64_t iSpecies, iAlt, iDir;
+
+  std::string bcsType = mklower(bcs["type"]);
 
   //-----------------------------------------------
   // MSIS BCs - only works if FORTRAN is enabled!
   //-----------------------------------------------
 
-  if (bcs["type"] == "Msis") {
+  if (bcsType == "msis") {
 
     report.print(2, "Using MSIS for Boundary Conditions");
 
-    Msis msis(input);
+    Msis msis;
 
     if (!msis.is_ok()) {
       didWork = false;
+      report.error("MSIS initialization not ok");
 
       if (report.test_verbose(0)) {
         std::cout << "MSIS Boundary Conditions asked for, ";
         std::cout << "but MSIS is not compiled! Yikes!\n";
       }
-    }
+    } else
+      didWork = true;
 
     msis.set_time(time);
     precision_t f107 = indices.get_f107(time.get_current());
@@ -117,7 +159,7 @@ bool Neutrals::set_lower_bcs(Grid grid,
       // if it is not, then fill with a value:
       temperature_scgc.slice(0).fill(initial_temperatures[0]);
 
-    for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
+    for (iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
       if (report.test_verbose(3))
         std::cout << "Setting Species : " << species[iSpecies].cName << "\n";
 
@@ -143,21 +185,45 @@ bool Neutrals::set_lower_bcs(Grid grid,
   // Planet BCs - set to fixed constant values.
   //-----------------------------------------------
 
-  if (bcs["type"] == "Planet") {
+  if (bcsType == "planet") {
 
     report.print(2, "setting lower bcs to planet");
 
     // Set the lower boundary condition:
-    for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
+    for (iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
       species[iSpecies].density_scgc.slice(0).
       fill(species[iSpecies].lower_bc_density);
     }
 
     temperature_scgc.slice(0).fill(initial_temperatures[0]);
-    // Don't need to set the temperature or winds, since they are
-    // uniform fixed values that don't change...
+    didWork = true;
+  }
 
-  } // type == Planet
+  // fill the second+ grid cells with the bottom temperature:
+  for (iAlt = 1; iAlt < nGCs; iAlt++)
+    temperature_scgc.slice(iAlt) = temperature_scgc.slice(iAlt - 1);
+
+  // fill the second+ grid cells with a hydrostatic solution:
+  for (iSpecies = 0; iSpecies < nSpecies; iSpecies++)
+    fill_with_hydrostatic(iSpecies, 1, nGCs, grid);
+
+  // Force vertical velocities to be zero in the ghost cells:
+  for (iDir = 0; iDir < 3; iDir++) {
+    for (iAlt = 0; iAlt < nGCs; iAlt++) {
+      for (iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
+        // species velocity:
+        species[iSpecies].velocity_vcgc[iDir].slice(iAlt).zeros();
+      }
+
+      // bulk velocity:
+      velocity_vcgc[iDir].slice(iAlt).zeros();
+    }
+  }
+
+  if (!didWork) {
+    report.error("issue with lower BCs!");
+    report.error("maybe check boundaryconditions type : " + bcsType);
+  }
 
   report.exit(function);
   return didWork;
@@ -172,7 +238,7 @@ bool Neutrals::set_lower_bcs(Grid grid,
 //      iDir = 3 -> -y
 //----------------------------------------------------------------------
 
-bool Neutrals::set_horizontal_bcs(int64_t iDir, Grid grid, Report &report) {
+bool Neutrals::set_horizontal_bcs(int64_t iDir, Grid grid) {
 
   std::string function = "Neutrals::set_horizontal_bcs";
   static int iFunction = -1;

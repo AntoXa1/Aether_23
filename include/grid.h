@@ -4,6 +4,7 @@
 #ifndef INCLUDE_GRID_H_
 #define INCLUDE_GRID_H_
 
+#include <unordered_map>
 #include "mpi.h"
 
 // ----------------------------------------------------------------------------
@@ -15,11 +16,22 @@ class Grid {
 public:
 
   // Armidillo Cube Versions:
+  // Cell Center Coordinates
   arma_cube geoLon_scgc, geoX_scgc;
   arma_cube geoLat_scgc, geoY_scgc;
   arma_cube geoAlt_scgc, geoZ_scgc;
   arma_cube geoLocalTime_scgc;
 
+  // Reference coordinate
+  arma_cube refx_scgc, refy_scgc;
+
+  // Transformation matrices, cell center
+  arma_cube A11_scgc, A12_scgc, A21_scgc, A22_scgc;
+  arma_cube A11_inv_scgc, A12_inv_scgc, A21_inv_scgc, A22_inv_scgc;
+  arma_cube g11_upper_scgc, g12_upper_scgc, g21_upper_scgc, g22_upper_scgc;
+  arma_cube sqrt_g_scgc;
+
+  // Edge/Corner coordinates
   arma_cube geoLon_Left;
   arma_cube geoLon_Down;
   arma_cube geoLon_Corner;
@@ -30,6 +42,21 @@ public:
 
   arma_cube geoAlt_Below;
   arma_cube geoAlt_Corner;
+
+  // Reference Coordinate
+  arma_cube refx_Left, refy_Left;
+  arma_cube refx_Down, refy_Down;
+  arma_cube refx_Corner, refy_Corner;
+  // Transformation coordinates
+  arma_cube A11_Left, A12_Left, A21_Left, A22_Left;
+  arma_cube A11_inv_Left, A12_inv_Left, A21_inv_Left, A22_inv_Left;
+  arma_cube g11_upper_Left, g12_upper_Left, g21_upper_Left, g22_upper_Left;
+  arma_cube sqrt_g_Left;
+
+  arma_cube A11_Down, A12_Down, A21_Down, A22_Down;
+  arma_cube A11_inv_Down, A12_inv_Down, A21_inv_Down, A22_inv_Down;
+  arma_cube g11_upper_Down, g12_upper_Down, g21_upper_Down, g22_upper_Down;
+  arma_cube sqrt_g_Down;
 
   // These define the magnetic grid:
   // Armidillo Cube Versions:
@@ -68,7 +95,12 @@ public:
   arma_cube radius_scgc;
   arma_cube radius2_scgc;
   arma_cube radius2i_scgc;
-  arma_cube gravity_scgc;
+
+  std::vector<arma_cube> rad_unit_vcgc;
+  arma_cube gravity_potential_scgc;
+  std::vector<arma_cube> gravity_vcgc;
+
+  std::vector<arma_cube> cent_acc_vcgc;
 
   arma_cube sza_scgc;
   arma_cube cos_sza_scgc;
@@ -78,11 +110,21 @@ public:
   arma_cube dalt_ratio_scgc;
   arma_cube dalt_ratio_sq_scgc;
 
+  arma_cube MeshCoefm2;
+  arma_cube MeshCoefm1;
+  arma_cube MeshCoefp0;
+  arma_cube MeshCoefp1;
+  arma_cube MeshCoefp2;
+
   arma_cube dlon_center_scgc;
   arma_cube dlon_center_dist_scgc;
 
   arma_cube dlat_center_scgc;
   arma_cube dlat_center_dist_scgc;
+
+  // dx dy for reference grid system
+  // Vector of dx dy of different altitudes
+  arma_vec drefx, drefy;
 
   std::vector<arma_cube> bfield_vcgc;
   arma_cube bfield_mag_scgc;
@@ -111,34 +153,40 @@ public:
 
   int64_t get_nGCs();
 
-  void calc_sza(Planets planet, Times time, Report &report);
-  void calc_gse(Planets planet, Times time, Report &report);
-  void calc_mlt(Report &report);
-  void fill_grid(Planets planet, Report &report);
-  void fill_grid_radius(Planets planet, Report &report);
+  void fill_grid(Planets planet);
+  void correct_xy_grid(Planets planet);
+  void calc_sza(Planets planet, Times time);
+  void calc_gse(Planets planet, Times time);
+  void calc_mlt();
+
+  void calc_grid_spacing(Planets planet);
+  void calc_alt_grid_spacing();
+  void calc_lat_grid_spacing();
+  void calc_long_grid_spacing();
+  void fill_grid_radius(Planets planet);
+  void calc_rad_unit(Planets planet);
+  void calc_gravity(Planets planet);
   bool init_geo_grid(Quadtree quadtree,
-		     Planets planet,
-		     Inputs input,
-		     Report &report);
+		     Planets planet);
   
   void initMagneticGrid(Planets planet, Inputs input, Report &report);
 
   void init_mag_grid(Planets planet, Inputs input, Report &report);
 
   void init_dipole_grid(Quadtree quadtree, Planets planet, Inputs input, Report &report);
-  void create_sphere_connection(Quadtree quadtree,
-                                Inputs input,
-                                Report &report);
-  void create_sphere_grid(Quadtree quadtree, Inputs input, Report &report);
-  void create_cubesphere_connection(Quadtree quadtree,
-                                    Inputs input,
-                                    Report &report);
-  void create_cubesphere_grid(Quadtree quadtree, Inputs input, Report &report);
-  void create_altitudes(Planets planet, Inputs input, Report &report);
-  void fill_grid_bfield(Planets planet, Inputs input, Report &report);
+  void create_sphere_connection(Quadtree quadtree);
+  void create_sphere_grid(Quadtree quadtree);
+  void create_cubesphere_connection(Quadtree quadtree);
+  void create_cubesphere_grid(Quadtree quadtree);
+  void create_altitudes(Planets planet);
+  void fill_grid_bfield(Planets planet);
   bool read_restart(std::string dir);
   bool write_restart(std::string dir);
   void report_grid_boundaries();
+  void calc_cent_acc(Planets planet);
+
+  // Update ghost cells with values from other processors
+  void exchange(arma_cube &data, const bool pole_inverse);
 
   // Need to move these to private at some point:
 
@@ -310,6 +358,23 @@ public:
 
   // Processed interpolation coefficients
   std::vector<struct interp_coef_t> interp_coefs;
+
+  // Initialize connections between processors
+  void init_connection();
+  // Used for message exchange
+  struct idx2d_t {
+    // Index of row and column
+    int64_t ilon;
+    int64_t ilat;
+    // -1 if message crosses the north/south pole, 1 otherwise
+    int inverse;
+  };
+  // Store which processor needs its value
+  std::unordered_map<int, std::vector<struct interp_coef_t>> exch_send;
+  // Store which processor it gets value from
+  std::unordered_map<int, std::vector<struct idx2d_t>> exch_recv;
+  // The communicator for set of processors whose iMembers are equal
+  MPI_Comm grid_comm;
 
   // Routines for converting between spherical geo to spherical tilted and
   // back

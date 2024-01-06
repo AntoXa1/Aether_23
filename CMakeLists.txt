@@ -14,12 +14,16 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 
 set(CMAKE_CXX_STANDARD 11)
 
+
+# cmake -DUSE_FORTRAN=ON ..
 if (USE_FORTRAN)
    enable_language(Fortran)
    file(GLOB MSIS_FILES ${PROJECT_SOURCE_DIR}/ext/MSIS/*.[fF]90)
+   file(GLOB IE_FILES ${PROJECT_SOURCE_DIR}/ext/IE/*.[fF]*)
    add_definitions(-DFORTRAN)
 else()
    set(MSIS_FILES )
+   set(IE_FILES )
 endif()
 
 # Directory variables
@@ -28,6 +32,7 @@ set(MAIN_DIR ${PROJECT_SOURCE_DIR}/src/main)
 set(TESTS_DIR ${PROJECT_SOURCE_DIR}/tests)
 set(OUT_DIR ${PROJECT_SOURCE_DIR}/src/output)
 set(RUN_DIR ${PROJECT_SOURCE_DIR}/run)
+
 
 
 # if(TEST_INTERPOLATION)
@@ -43,6 +48,20 @@ if(TEST_MGRID)
   # add_executable(test_mgrid ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/test_mgrid.cpp)
 endif()
 
+if(TEST_INTERPOLATION)
+  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${IE_FILES} ${MAIN_DIR}/main_test_interpolation.cpp)
+elseif(TEST_COORD)
+  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${IE_FILES} ${MAIN_DIR}/main_test_coord.cpp)
+elseif(TEST_EXCHANGE)
+  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${IE_FILES} ${MAIN_DIR}/main_test_exchange.cpp)
+  set(USE_DOUBLE_PRECISION True)
+elseif(TEST_GRADIENT)
+  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/main_test_gradient.cpp)
+else()
+  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${IE_FILES} ${MAIN_DIR}/main.cpp)
+
+endif()
+
 
 if(USE_DOUBLE_PRECISION)
   add_compile_definitions(AETHER_USE_PRECISION_DOUBLE)
@@ -56,6 +75,7 @@ endif()
 target_compile_options(aether PUBLIC)
 
 set(SHARE_INCLUDE ${PROJECT_SOURCE_DIR}/share/include)
+
 # set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 

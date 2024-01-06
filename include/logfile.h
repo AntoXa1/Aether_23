@@ -100,9 +100,7 @@ public:
    *    The logfile will output all indicies and specified neutrals and ions
    *    every dt time.
    */
-  Logfile(Indices &indices,
-          Inputs &input,
-          Report &report);
+  Logfile(Indices &indices);
   
   /**
    * \brief Close the file stream if not append
@@ -117,8 +115,7 @@ public:
                      Neutrals &neutrals,
                      Ions &ions,
                      Grid &gGrid,
-                     Times &time,
-                     Report &report);
+                     Times &time);
 
 private:
 
@@ -136,7 +133,7 @@ private:
   bool doAppend;
 
   // A randomly chosen point for test
-  std::vector<precision_t> lla {5,4,40};
+  std::vector<precision_t> lla {2,2,2};
 };
 
 #endif  // INCLUDE_LOGFILE_H_

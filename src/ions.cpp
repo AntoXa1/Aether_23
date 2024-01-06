@@ -24,7 +24,7 @@ Ions::species_chars Ions::create_species(Grid grid) {
   tmp.density_scgc.set_size(nLons, nLats, nAlts);
   tmp.density_scgc.fill(1e10);
   tmp.temperature_scgc.set_size(nLons, nLats, nAlts);
-  tmp.temperature_scgc.ones();
+  tmp.temperature_scgc.fill(200.0);
   tmp.ionization_scgc.set_size(nLons, nLats, nAlts);
   tmp.ionization_scgc.zeros();
 
@@ -36,7 +36,13 @@ Ions::species_chars Ions::create_species(Grid grid) {
   tmp.par_velocity_vcgc = make_cube_vector(nLons, nLats, nAlts, 3);
   tmp.perp_velocity_vcgc = make_cube_vector(nLons, nLats, nAlts, 3);
 
-  //tmp.nu_ion_neutral_vcgc = make_cube_vector(nLons, nLats, nAlts, nSpecies);
+  for (int iDir = 0; iDir < 3; iDir++) {
+    tmp.par_velocity_vcgc[iDir].zeros();
+    tmp.perp_velocity_vcgc[iDir].zeros();
+  }
+
+  // The collision frequencies need the neutrals, so those are
+  // initialized in init_ion_temperature.
 
   return tmp;
 }
@@ -45,7 +51,7 @@ Ions::species_chars Ions::create_species(Grid grid) {
 //  Initialize Ions class
 // -----------------------------------------------------------------------------
 
-Ions::Ions(Grid grid, Planets planet, Inputs input, Report report) {
+Ions::Ions(Grid grid, Planets planet) {
 
   int64_t nLons = grid.get_nLons();
   int64_t nLats = grid.get_nLats();
@@ -60,17 +66,17 @@ Ions::Ions(Grid grid, Planets planet, Inputs input, Report report) {
     species.push_back(tmp);
   }
 
-  velocity_name.push_back("Ion Velocity (Zonal)");
-  velocity_name.push_back("Ion Velocity (Meridional)");
-  velocity_name.push_back("Ion Velocity (Vertical)");
+  velocity_name.push_back("velocity_east");
+  velocity_name.push_back("velocity_north");
+  velocity_name.push_back("velocity_up");
 
-  par_velocity_name.push_back("Parallel Ion Velocity (Zonal)");
-  par_velocity_name.push_back("Parallel Ion Velocity (Meridional)");
-  par_velocity_name.push_back("Parallel Ion Velocity (Vertical)");
+  par_velocity_name.push_back("velocity_parallel_east");
+  par_velocity_name.push_back("velocity_parallel_north");
+  par_velocity_name.push_back("velocity_parallel_up");
 
-  perp_velocity_name.push_back("Perp. Ion Velocity (Zonal)");
-  perp_velocity_name.push_back("Perp. Ion Velocity (Meridional)");
-  perp_velocity_name.push_back("Perp. Ion Velocity (Vertical)");
+  perp_velocity_name.push_back("velocity_perp_east");
+  perp_velocity_name.push_back("velocity_perp_north");
+  perp_velocity_name.push_back("velocity_perp_up");
 
   // Create one extra species for electrons
   tmp = create_species(grid);
@@ -81,10 +87,14 @@ Ions::Ions(Grid grid, Planets planet, Inputs input, Report report) {
   density_scgc.set_size(nLons, nLats, nAlts);
   density_scgc.ones();
   velocity_vcgc = make_cube_vector(nLons, nLats, nAlts, 3);
+
+  for (int iDir = 0; iDir < 3; iDir++)
+    velocity_vcgc[iDir].zeros();
+
   temperature_scgc.set_size(nLons, nLats, nAlts);
-  temperature_scgc.ones();
+  temperature_scgc.fill(200.0);
   electron_temperature_scgc.set_size(nLons, nLats, nAlts);
-  electron_temperature_scgc.ones();
+  electron_temperature_scgc.fill(200);
 
   tmp.sources_scgc.set_size(nLons, nLats, nAlts);
   tmp.sources_scgc.zeros();
@@ -106,7 +116,7 @@ Ions::Ions(Grid grid, Planets planet, Inputs input, Report report) {
   exb_vcgc = make_cube_vector(nLons, nLats, nAlts, 3);
 
   // This gets a bunch of the species-dependent characteristics:
-  int iErr = read_planet_file(planet, input, report);
+  int iErr = read_planet_file(planet);
 
   if (input.get_do_restart()) {
     report.print(1, "Restarting! Reading ion files!");
@@ -124,7 +134,7 @@ Ions::Ions(Grid grid, Planets planet, Inputs input, Report report) {
 // Read in the planet file that describes the species - only ions
 // -----------------------------------------------------------------------------
 
-int Ions::read_planet_file(Planets planet, Inputs input, Report report) {
+int Ions::read_planet_file(Planets planet) {
 
   int iErr = 0;
   std::string hash;
@@ -144,6 +154,14 @@ int Ions::read_planet_file(Planets planet, Inputs input, Report report) {
     species[iSpecies].DoAdvect = ions["advect"][iSpecies];
   }
 
+  // account for advected ions:
+  for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
+    if (species[iSpecies].DoAdvect == 1) {
+      nSpeciesAdvect++;
+      species_to_advect.push_back(iSpecies);
+    }
+  }
+
   species[nSpecies].cName = "e-";
   species[nSpecies].mass = cME;
   species[nSpecies].charge = -1;
@@ -152,12 +170,75 @@ int Ions::read_planet_file(Planets planet, Inputs input, Report report) {
   return iErr;
 }
 
+//----------------------------------------------------------------------
+// Reports location of nans inserted into specified variable
+//----------------------------------------------------------------------
+void Ions::nan_test(std::string variable) {
+  std::vector<int> locations;
+  std::string message = ("For Ions " + variable + " ");
+
+  if (variable == "temperature_scgc") {
+    locations = insert_indefinites(temperature_scgc);
+    message += print_nan_vector(locations, temperature_scgc);
+  }
+
+  if (variable == "density_scgc") {
+    locations = insert_indefinites(density_scgc);
+    message += print_nan_vector(locations, density_scgc);
+  }
+
+  if (variable == "velocity_vcgc") {
+    locations = insert_indefinites(velocity_vcgc[0]);
+    message +=
+      "at the x loc " + print_nan_vector(locations, velocity_vcgc[0]);
+    locations = insert_indefinites(velocity_vcgc[1]);
+    message +=
+      "at the y loc " + print_nan_vector(locations, velocity_vcgc[1]);
+    locations = insert_indefinites(velocity_vcgc[2]);
+    message +=
+      "at the z loc " + print_nan_vector(locations, velocity_vcgc[2]);
+  }
+
+  std::cout << message;
+}
+
+//----------------------------------------------------------------------
+// Checks for nans and +/- infinities in density, temp, and velocity
+//----------------------------------------------------------------------
+
+bool Ions::check_for_nonfinites() {
+  bool non_finites_exist = false;
+
+  if (!all_finite(density_scgc, "density_scgc") ||
+      !all_finite(temperature_scgc, "temperature_scgc") ||
+      !all_finite(velocity_vcgc, "velocity_vcgc"))
+    non_finites_exist = true;
+
+  if (non_finites_exist)
+    throw std::string("Check for nonfinites failed!!!\n");
+
+  return non_finites_exist;
+}
+
+// -----------------------------------------------------------------------------
+// Set a floor for ion densities
+// -----------------------------------------------------------------------------
+
+void Ions::set_floor() {
+
+  int iSpecies;
+
+  for (iSpecies = 0; iSpecies < nSpecies; iSpecies++)
+    species[iSpecies].density_scgc.clamp(1.0, 1e15);
+
+  return;
+}
 
 // -----------------------------------------------------------------------------
 // Calculate the electron density from the sum of all ion species
 // -----------------------------------------------------------------------------
 
-void Ions::fill_electrons(Report &report) {
+void Ions::fill_electrons() {
 
   int iSpecies;
 
@@ -183,7 +264,7 @@ void Ions::fill_electrons(Report &report) {
 // Will return nSpecies for electrons
 //----------------------------------------------------------------------
 
-int Ions::get_species_id(std::string name, Report &report) {
+int Ions::get_species_id(std::string name) {
 
   std::string function = "Ions::get_species_id";
   static int iFunction = -1;

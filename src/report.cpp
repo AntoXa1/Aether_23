@@ -8,6 +8,8 @@
 
 #include "../include/aether.h"
 
+Report report;
+
 // -----------------------------------------------------------------------
 // Initialize class Report
 // -----------------------------------------------------------------------
@@ -16,6 +18,7 @@ Report::Report() {
   current_entry = "";
   nEntries = 0;
   iVerbose = -2;
+  iDefaultVerbose = -2;
   iProcReport = 0;
   divider = ">";
   divider_length = divider.length();
@@ -83,7 +86,7 @@ void Report::enter(std::string input, int &iFunction) {
   iCurrentFunction = iEntry;
 
   // Sometimes it is good to uncomment this line and see what is happening:
-  //std::cout << "iLevel : " << iLevel << " " << current_entry << "\n";
+  // std::cout << "iLevel : " << iLevel << " " << current_entry << "\n";
   print(iLevel, "Entering function : " + current_entry);
 }
 
@@ -139,6 +142,9 @@ void Report::times() {
     std::cout << "Timing Summary :\n";
     float min_timing = entries[0].timing_total * TimingPercent / 100.0;
 
+    if (min_timing < 0.01)
+      min_timing = 0.01;
+
     for (int i = 0; i < nEntries; i++) {
       if (entries[i].iLevel <= iTimingDepth &&
           entries[i].timing_total >= min_timing) {
@@ -168,13 +174,33 @@ void Report::print(int iLevel, std::string output_string) {
 }
 
 // -----------------------------------------------------------------------
+// Adds function and error to error_list
+// -----------------------------------------------------------------------
+
+void Report::error(std::string error_in) {
+  error_struct new_error;
+  new_error.func = current_entry;
+  new_error.error = error_in;
+  error_list.push_back(new_error);
+}
+
+// -----------------------------------------------------------------------
+// Reports list of errors
+// -----------------------------------------------------------------------
+
+void Report::report_errors() {
+  for (int i = 0; i < error_list.size(); i++)
+    std::cout << error_list[i].func << " : " << error_list[i].error << "\n";
+}
+
+// -----------------------------------------------------------------------
 // Test verbose level and print line starter if it is high enough
 // -----------------------------------------------------------------------
 
 int Report::test_verbose(int iLevel) {
   int iPass = 0;
 
-  if (iLevel <= iVerbose) {
+  if (iLevel <= iVerbose && iVerbose > -1) {
     iPass = 1;
 
     for (int iL = 0; iL < iLevel; iL++)

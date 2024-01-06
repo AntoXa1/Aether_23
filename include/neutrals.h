@@ -1,8 +1,11 @@
 // Copyright 2020, the Aether Development Team (see doc/dev_team.md for members)
+// Copyright 2020, the Aether Development Team (see doc/dev_team.md for members)
 // Full license can be found in License.md
 
 #ifndef INCLUDE_NEUTRALS_H_
 #define INCLUDE_NEUTRALS_H_
+
+#include "../include/aether.h"
 
 /**************************************************************
  * \class Neutrals
@@ -48,6 +51,27 @@ class Neutrals {
 
     /// Number density of species (/m3)
     arma_cube density_scgc;
+    arma_cube newDensity_scgc;
+    
+    /// Velocity of each species (m/s). For all below:
+    /// Index 0 = longitudinal component of velocity
+    /// Index 1 = latitudinal
+    /// Index 2 = altitudinal
+    std::vector<arma_cube> velocity_vcgc;
+    std::vector<arma_cube> newVelocity_vcgc;
+
+    /// Acceleration of each species (m/s^2)
+    std::vector<arma_cube> acc_neutral_friction;
+      
+    /// Acceleration of each species based on Eddy contribution.
+    /// Only in vertical direction.
+    arma_cube acc_eddy;
+      
+    /// Acceleration of each species due to ion drag.
+    std::vector<arma_cube> acc_ion_drag;
+            
+    /// concentration (density of species / total density)
+    arma_cube concentration_scgc;
 
     /// Diffusion through other neutral species:
     std::vector<float> diff0;
@@ -69,6 +93,13 @@ class Neutrals {
     /// Which ion species results from the ionization?
     std::vector<int> iEuvIonSpecies_;
 
+    /// How many rows in the EUV CSV file are for ionization of this species?
+    int nEuvPeiSpecies;
+    /// Which row in the EUV CSV file if for the particular ionization?
+    std::vector<int> iEuvPeiId_;
+    /// Which ion species results from the ionization?
+    std::vector<int> iEuvPeiSpecies_;
+    
     int nAuroraIonSpecies;
     std::vector<int> iAuroraIonSpecies_;
     float Aurora_Coef;
@@ -107,8 +138,12 @@ class Neutrals {
   /// bulk velocity (m/s)
   std::vector<arma_cube> velocity_vcgc;
 
+  /// sound speed + abs(bulk velocity (m/s))
+  std::vector<arma_cube> cMax_vcgc;
+  
   /// bunk temperature (K)
   arma_cube temperature_scgc;
+  arma_cube newTemperature_scgc;
 
   /// bulk mass density (kg/m3)
   arma_cube rho_scgc;
@@ -131,9 +166,18 @@ class Neutrals {
   /// Bulk thermal heat conduction:
   arma_cube kappa_scgc;
 
+  /// Eddy Diffusion
+  arma_cube kappa_eddy_scgc;
+
+  /// O cooling 
+  arma_cube O_cool_scgc;
+
+  /// NO cooling
+  arma_cube NO_cool_scgc;
+
   /// Vector of all species-specific items:
   std::vector<species_chars> species;
-  
+
   /// Maximum Chapman integral (will give nearly infinite tau in EUV)
   precision_t max_chapman = 1.0e26;
 
@@ -155,6 +199,12 @@ class Neutrals {
   std::vector<double> initial_altitudes;
   std::vector<double> initial_temperatures;
   int64_t nInitial_temps = 0;
+    
+  /// Number of species to advect:
+  int nSpeciesAdvect;
+    
+  /// IDs of species to advect:
+  std::vector<int> species_to_advect;
 
   /// names and units
   std::string density_name = "Neutral Bulk Density";
@@ -175,21 +225,15 @@ class Neutrals {
      \param planet contains information about the species to simulate
      \param time contains information about the current time
      \param indices used to help set initial conditions
-     \param input info about how user has configured things
-     \param report allow reporting to occur
    **/
   Neutrals(Grid grid,
 	   Planets planet,
 	   Times time,
-	   Indices indices,
-	   Inputs input,
-	   Report report);
+	   Indices indices);
 
   /**********************************************************************
      \brief Creates the variables within the species_chars structure
      \param grid The grid to define the neutrals on
-     \param input info about how user has configured things
-     \param report allow reporting to occur
    **/
   species_chars create_species(Grid grid);
 
@@ -201,24 +245,18 @@ class Neutrals {
      for specifying the neutrals.
 
      \param planet contains information about the species to simulate
-     \param input info about how user has configured things
-     \param report allow reporting to occur
    **/
-  int read_planet_file(Planets planet, Inputs input, Report report);
+  int read_planet_file(Planets planet);
 
   /**********************************************************************
      \brief Sets the initial conditions of the neutrals
      \param grid The grid to define the neutrals on
      \param time contains information about the current time
      \param indices used to help set initial conditions
-     \param input info about how user has configured things
-     \param report allow reporting to occur
    **/
-  int initial_conditions(Grid grid,
-			 Times time,
-			 Indices indices,
-			 Inputs input,
-			 Report &report);
+  bool initial_conditions(Grid grid,
+			  Times time,
+			  Indices indices);
 
   /**********************************************************************
      \brief temporary function to set neutral densities with in the model
@@ -228,105 +266,159 @@ class Neutrals {
      temperature.  It is temporary until we get a vertical solver.
 
      \param iSpecies The species to fill (optional)
+     \param iStart The starting altitude to work with
+     \param iEnd The ending altitude to work with (NOT INCLUDED!!)
      \param grid The grid to define the neutrals on
-     \param report allow reporting to occur
    **/
-  void fill_with_hydrostatic(Grid grid, Report report);
+  void fill_with_hydrostatic(int64_t iStart,
+			     int64_t iEnd,
+			     Grid grid);
 
   void fill_with_hydrostatic(int64_t iSpecies,
-			     Grid grid, Report report);
-  
-  
+			     int64_t iStart,
+			     int64_t iEnd,
+			     Grid grid);
+    
   void fill_forMagGrid_with_hydrostatic(int64_t iSpecies, Grid grid, Report report);
   
   /**********************************************************************
      \brief Calculate the bulk mass density from individual species densities
-     \param report allow reporting to occur
    **/
-  void calc_mass_density(Report &report);
+  void calc_mass_density();
+
+  /**********************************************************************
+     \brief Calculate the scale heights for the individual species
+     \param grid The grid to define the neutrals on
+   **/
+  void calc_scale_height(Grid grid);
+  
+  /**********************************************************************
+     \brief Calculate the eddy diffusion coefficient in valid pressure
+   **/
+  void calc_kappa_eddy();
+  
+  /**********************************************************************
+     \brief Calculate the concentration for each species (species ndensity / total ndensity)
+   **/
+  void calc_concentration();
+    
+  /**********************************************************************
+     \brief Calculate the bulk mean major mass
+   **/
+  void calc_mean_major_mass();
+    
+  /**********************************************************************
+     \brief Calculate the mean pressure
+   **/
+  void calc_pressure();
+    
+  /**********************************************************************
+     \brief Calculate bulk velocity
+   **/
+  void calc_bulk_velocity();
+
+  /**********************************************************************
+     \brief Assigns bulk velocity to all non-advected species
+   **/
+  void assign_bulk_velocity();
 
   /**********************************************************************
      \brief Calculate the bulk specific heat from individual species
-     \param report allow reporting to occur
    **/
-  void calc_specific_heat(Report &report);
+  void calc_specific_heat();
+
+  /**********************************************************************
+     \brief Calculate speed of sound + abs(velocity) in all 3 directions
+   **/
+  void calc_cMax();
+
+  /**********************************************************************
+     \brief Calculate dt (cell size / cMax) in each direction, and take min
+     \param dt returns the neutral time-step
+     \param grid The grid to define the neutrals on
+   **/
+  precision_t calc_dt(Grid grid);
+  precision_t calc_dt_cubesphere(Grid grid);
 
   /**********************************************************************
      \brief Calculate the chapman integrals for the individual species
      \param grid The grid to define the neutrals on
-     \param report allow reporting to occur
    **/
-  void calc_chapman(Grid grid, Report &report);
+  void calc_chapman(Grid grid);
 
   /**********************************************************************
      \brief Calculate the neutral bulk vertical thermal conduction
      \param grid The grid to define the neutrals on
      \param time The times within the model (dt is needed)
-     \param report allow reporting to occur
    **/
-  void calc_conduction(Grid grid, Times time, Report &report);
+  void calc_conduction(Grid grid, Times time);
+
+  /**********************************************************************
+     \brief Calculate the O radiative cooling
+   **/
+  void calc_O_cool();
+
+  /**********************************************************************
+     \brief Calculate the NO radiative cooling
+   **/
+  void calc_NO_cool();
 
   /**********************************************************************
      \brief Add all of the neutral source terms to each of the equations
      \param time The times within the model (dt is needed)
-     \param report allow reporting to occur
    **/
-  void add_sources(Times time, Report &report);
+  void add_sources(Times time);
 
   /**********************************************************************
      \brief Set boundary conditions for the neutrals
      \param grid The grid to define the neutrals on
      \param time contains information about the current time
      \param indices used to help set initial conditions
-     \param input info about how user has configured things
-     \param report allow reporting to occur
    **/
   bool set_bcs(Grid grid,
 	       Times time,
-	       Indices indices,
-	       Inputs input,
-	       Report &report);
+	       Indices indices);
 
   /**********************************************************************
      \brief Set lower boundary conditions for the neutrals
      \param grid The grid to define the neutrals on
      \param time contains information about the current time
      \param indices used to help set initial conditions
-     \param input info about how user has configured things
-     \param report allow reporting to occur
    **/
   bool set_lower_bcs(Grid grid,
 		     Times time,
-		     Indices indices,
-		     Inputs input,
-		     Report &report);
+		     Indices indices);
 
   /**********************************************************************
      \brief Set upper boundary conditions for the neutrals
      \param grid The grid to define the neutrals on
      \param time contains information about the current time
      \param indices used to help set initial conditions
-     \param input info about how user has configured things
-     \param report allow reporting to occur
    **/
-  bool set_upper_bcs(Grid grid,
-		     Inputs input,
-		     Report &report);
+  bool set_upper_bcs(Grid grid);
 
   /**********************************************************************
      \brief Set boundary conditions for the neutrals
      \param iDir direction of the BC to set
      \param grid The grid to define the neutrals on
-     \param report allow reporting to occur
   **/
-  bool set_horizontal_bcs(int64_t iDir, Grid grid, Report &report);
+  bool set_horizontal_bcs(int64_t iDir, Grid grid);
   
   /**********************************************************************
      \brief Get the species ID number (int) given the species name (string)
      \param name string holding the species name (e.g., "O+")
-     \param report allow reporting to occur
    **/
-  int get_species_id(std::string name, Report &report);
+  int get_species_id(std::string name);
+
+  /*****************************************************************************
+      \brief  Checks for nans and +/- infinities in density, temp, and velocity
+    **/
+  bool check_for_nonfinites();
+
+  /**********************************************************************
+      \brief Checks for nans in the specified variable
+    **/
+  void nan_test(std::string variable);
 
   /**********************************************************************
      \brief Read / Write restart files for the neutral variables
@@ -338,10 +430,16 @@ class Neutrals {
   /**********************************************************************
      \brief Exchange messages between processors
      \param grid The grid to define the neutrals on
-     \param report allow reporting to occur
    **/
-  bool exchange(Grid &grid, Report &report);
+  bool exchange(Grid &grid);
+  bool exchange_old(Grid &grid);
 
+  /**********************************************************************
+   \brief add eddy contributions to vertical acceleration
+   \param grid The grid to define the neutrals on
+  **/ 
+  void vertical_momentum_eddy(Grid &grid);
+  
   /**********************************************************************
      \brief Exchange one face for the NEUTRALS
 
@@ -374,6 +472,24 @@ class Neutrals {
 		       bool DoReverseX,
 		       bool DoReverseY,
 		       bool XbecomesY);
+
+  /**********************************************************************
+     \brief Vertical advection solver - Rusanov 
+     \param grid The grid to define the neutrals on
+     \param time contains information about the current time
+   **/
+
+  void solver_vertical_rusanov(Grid grid,
+			       Times time);
+  
+  /**********************************************************************
+     \brief Call the correct vertical advection scheme
+     \param grid The grid to define the neutrals on
+     \param time contains information about the current time
+   **/
+
+  bool advect_vertical(Grid grid, Times time);
+  
 };
 
 #endif  // INCLUDE_NEUTRALS_H_

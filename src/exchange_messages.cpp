@@ -317,7 +317,6 @@ bool Neutrals::unpack_one_face(int iSender,
   return DidWork;
 }
 
-
 // -----------------------------------------------------------------------------
 // Send for asynchronous communication. Don't touch buffer until mpi
 // says that it has been received.
@@ -361,7 +360,6 @@ bool Grid::receive_one_face(int64_t iFace) {
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-
 
 Grid::messages_struct Grid::make_new_interconnection(int64_t iDir,
                                                      int64_t nVars,
@@ -413,7 +411,7 @@ Grid::messages_struct Grid::make_new_interconnection(int64_t iDir,
 //   5. Unpack variables from all sides
 // -----------------------------------------------------------------------------
 
-bool Neutrals::exchange(Grid &grid, Report &report) {
+bool Neutrals::exchange_old(Grid &grid) {
 
   std::string function = "Neutrals::exchange";
   static int iFunction = -1;
@@ -611,7 +609,7 @@ bool Neutrals::exchange(Grid &grid, Report &report) {
                                 grid.interchanges[iDir].DoReverseY,
                                 grid.interchanges[iDir].XbecomesY);
     } else
-      set_horizontal_bcs(iDir, grid, report);
+      set_horizontal_bcs(iDir, grid);
   }
 
   // Wait for all processors to be done.
@@ -621,4 +619,3 @@ bool Neutrals::exchange(Grid &grid, Report &report) {
 
   return DidWork;
 }
-
