@@ -12,8 +12,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_COMPILER "/usr/bin/gcc")
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 
-set(CMAKE_CXX_STANDARD 11)
+# set(CMAKE_CXX_STANDARD 11)
 
+message(PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+# message(FATAL_ERROR "Foo")
 
 # in build; cmake -DUSE_FORTRAN=ON ..
 if (USE_FORTRAN)
@@ -33,6 +35,9 @@ set(TESTS_DIR ${PROJECT_SOURCE_DIR}/tests)
 set(OUT_DIR ${PROJECT_SOURCE_DIR}/src/output)
 set(RUN_DIR ${PROJECT_SOURCE_DIR}/run)
 
+message(MAIN_DIR="${MAIN_DIR}")
+message(RUN_DIR="${RUN_DIR}")
+message(OUT_DIR="${OUT_DIR}")
 
 
 # if(TEST_INTERPOLATION)
@@ -41,12 +46,6 @@ set(RUN_DIR ${PROJECT_SOURCE_DIR}/run)
 #   add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/main.cpp)
 # endif()
 
-# to use this, run:
-# cmake -DUSE_FORTRAN=ON -DTEST_MGRID=Y..
-if(TEST_MGRID)
-  # add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/test_mgrid.cpp)
-  add_executable(test_mgrid ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/test_mgrid.cpp)
-endif()
 
 if(TEST_INTERPOLATION)
   add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${IE_FILES} ${MAIN_DIR}/main_test_interpolation.cpp)
@@ -57,9 +56,13 @@ elseif(TEST_EXCHANGE)
   set(USE_DOUBLE_PRECISION True)
 elseif(TEST_GRADIENT)
   add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/main_test_gradient.cpp)
+elseif(TEST_MGRID)
+  # to use this, run:
+  # cmake -DUSE_FORTRAN=ON -DTEST_MGRID=Y..
+  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/test_mgrid.cpp)
+  # add_executable(test_mgrid ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/test_mgrid.cpp)
 else()
   add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${IE_FILES} ${MAIN_DIR}/main.cpp)
-
 endif()
 
 
@@ -72,7 +75,8 @@ endif()
 
 # Set compiler and cmake options
 # target_compile_options(aether PUBLIC -ffast-math -O3)
-target_compile_options(aether PUBLIC -Wfatal-errors)
+target_compile_options(aether PUBLIC)
+# -Wc++17-extensions -Wfatal-errors
 
 set(SHARE_INCLUDE ${PROJECT_SOURCE_DIR}/share/include)
 
@@ -88,6 +92,7 @@ set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH}
                       )
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/share
                       ${CMAKE_MODULE_PATH})
+
 target_include_directories(aether PUBLIC ${PROJECT_SOURCE_DIR}/include)
 include_directories(${SHARE_INCLUDE})
 

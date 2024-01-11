@@ -708,7 +708,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   
   // Calculate the radius, etc:
   
-  fill_grid_radius(planet, report);
+  fill_grid_radius(planet);
   
   //  fill_grid_bfield(planet, input, report);
   

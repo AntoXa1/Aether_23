@@ -27,8 +27,6 @@ Inputs::Inputs(Times &time) {
 
   // ------------------------------------------------
   // Grid Defaults:
-
-  //for geo grid
   geo_grid_input.alt_file = "";
   geo_grid_input.IsUniformAlt = true;
   geo_grid_input.alt_min = 100.0 * 1000.0;
@@ -52,33 +50,6 @@ Inputs::Inputs(Times &time) {
   } else {
     geo_grid_input.lat_min = -cPI / 2;
     geo_grid_input.lat_max = cPI / 2;
-  }
-  //for mag grid
-  mag_grid_input.alt_file = "";
-  mag_grid_input.IsUniformAlt = 1;
-  mag_grid_input.alt_min = 100.0 * 1000.0;
-  mag_grid_input.dalt = 5.0 * 1000.0;
-
-  nLonsMag = 4;
-  nLatsMag = 10;
-  nAltsMag = 10;
-
-  if (nLonsMag == 1) {
-    mag_grid_input.lon_min = 0.0;
-    mag_grid_input.lon_max = 0.0;
-  } else {
-    mag_grid_input.lon_min = 0.0;
-    mag_grid_input.lon_max = 2.0*cPI;
-  }
-
-  //note that for the mag grid this is invariant lat
-  //this is used to define an Lshell grid
-  if (nLatsMag == 1) {
-    mag_grid_input.lat_min = 0.0;
-    mag_grid_input.lat_max = 0.0;
-  } else {
-    mag_grid_input.lat_min = 10.0*cPI/180.0;
-    mag_grid_input.lat_max = 70.0*cPI/180.0;
   }
 
   euv_heating_eff_neutrals = 0.40;
@@ -437,7 +408,7 @@ precision_t Inputs::check_settings_pt(std::string key1,
 }
 
 // -----------------------------------------------------------------------
-// Return characteristics of the geo grid that are entered by the user
+// Return characteristics of the grid that are entered by the user
 // -----------------------------------------------------------------------
 
 Inputs::grid_input_struct Inputs::get_grid_inputs() {
@@ -671,51 +642,6 @@ bool Inputs::get_logfile_append() {
   return get_setting_bool("Logfile", "append");
 }
 
-
-Inputs::grid_input_struct Inputs::get_mgrid_inputs() {
-  // First Get Values:
-  // Here is where you would add the ability to overrite the defaults for the mag grid
-  std::cout << "setting maggrid stuff\n";
-  mag_grid_input.alt_file = settings["MagGrid"]["AltFile"];
-  mag_grid_input.IsUniformAlt = settings["MagGrid"]["IsUniformAlt"];
-  mag_grid_input.alt_min = settings["MagGrid"]["MinAlt"];
-  mag_grid_input.alt_max = settings["MagGrid"]["MaxAlt"];
-  mag_grid_input.min_apex = settings["MagGrid"]["MinApex"];
-  mag_grid_input.dalt = settings["MagGrid"]["dAlt"];
-
-  mag_grid_input.lat_min = settings["MagGrid"]["MinLat"];
-  mag_grid_input.lat_max = settings["MagGrid"]["MaxLat"];
-
-  mag_grid_input.lon_min = settings["MagGrid"]["MinLon"];
-  mag_grid_input.lon_max = settings["MagGrid"]["MaxLon"];
-  std::cout << "Done Setting inputs in dipole grid\n";
-
-  // Second Change Units
-  mag_grid_input.alt_min = mag_grid_input.alt_min * cKMtoM;
-  mag_grid_input.alt_max = mag_grid_input.alt_max * cKMtoM;
-  mag_grid_input.min_apex = mag_grid_input.min_apex * cKMtoM;
-
-  mag_grid_input.lat_min = mag_grid_input.lat_min * cDtoR;
-  mag_grid_input.lat_max = mag_grid_input.lat_max * cDtoR;
-  mag_grid_input.lon_min = mag_grid_input.lon_min * cDtoR;
-  mag_grid_input.lon_max = mag_grid_input.lon_max * cDtoR;
-
-  // If the grid is uniform, dalt is in km, else it is in fractions of
-  // scale height:
-  if (mag_grid_input.IsUniformAlt)
-     mag_grid_input.dalt = mag_grid_input.dalt * cKMtoM;
-
-  mag_grid_input.isOk = true;
-
-  if (mag_grid_input.min_apex <= mag_grid_input.alt_min) {
-    std::cout << "Need to make sure min apex > min alt!!\n";
-    mag_grid_input.isOk = false;
-  }
-
-  return mag_grid_input;
-}
-
-
 // -----------------------------------------------------------------------
 // Return whether user is student
 // -----------------------------------------------------------------------
@@ -921,25 +847,6 @@ int Inputs::get_original_seed() {
 }
 
 // -----------------------------------------------------------------------
-// Set random number seed
-// -----------------------------------------------------------------------
-
-void Inputs::set_seed(int seed) {
-  settings["Seed"] = seed;
-  updated_seed = seed;
-}
-
-// -----------------------------------------------------------------------
-// Return random number seed that has been updated
-// -----------------------------------------------------------------------
-
-int Inputs::get_updated_seed() {
-  std::default_random_engine get_random(updated_seed);
-  updated_seed = get_random();
-  return updated_seed;
-}
-
-// -----------------------------------------------------------------------
 // Return number of longitudes, latitudes, and altitudes in Geo grid
 // -----------------------------------------------------------------------
 
@@ -985,22 +892,6 @@ int Inputs::get_verbose() {
 
 int Inputs::get_verbose_proc() {
   return get_setting_int("Debug", "iProc");
-}
-
-// -----------------------------------------------------------------------
-// Return number of longitudes, latitudes, and altitudes in mag grid
-// -----------------------------------------------------------------------
-
-int Inputs::get_nLonsMag() {
-  return nLonsMag;
-}
-
-int Inputs::get_nLatsMag() {
-  return nLatsMag;
-}
-
-int Inputs::get_nAltsMag() {
-  return nAltsMag;
 }
 
 // -----------------------------------------------------------------------
@@ -1060,7 +951,7 @@ std::string Inputs::get_planet() {
 }
 
 // -----------------------------------------------------------------------
-//
+// Return file that contains (all) planetary characteristics
 // -----------------------------------------------------------------------
 
 std::string Inputs::get_planetary_file() {
@@ -1068,23 +959,17 @@ std::string Inputs::get_planetary_file() {
 }
 
 // -----------------------------------------------------------------------
-//
+// Return planetary file name that describes the species and such for
+// a given planet
 // -----------------------------------------------------------------------
 
 std::string Inputs::get_planet_species_file() {
-  return settings["PlanetSpeciesFile"];
+  return check_settings_str("PlanetSpeciesFile");
 }
 
 // -----------------------------------------------------------------------
-// Flag to check neutral and ions for nans and infinites
-// -----------------------------------------------------------------------
-
-bool Inputs::get_check_for_nans() {
-  return get_setting_bool("Debug", "check_for_nans");
-}
-
-// -----------------------------------------------------------------------
-// Checks to see if nan_test is needed
+// Flag to do the bulk ion temperature calculation instead
+// of individual ion specie temperature calculations
 // -----------------------------------------------------------------------
 
 bool Inputs::get_do_calc_bulk_ion_temp() {
@@ -1132,11 +1017,36 @@ bool Inputs::get_use_eddy_energy() {
 }
 
 // -----------------------------------------------------------------------
-// Returns which variable is being tested for nans
+//
 // -----------------------------------------------------------------------
 
 json Inputs::get_perturb_values() {
-  json values;
+  return get_setting_json("Perturb");
+}
+
+// -----------------------------------------------------------------------
+// Flag to check neutral and ions for nans and infinites
+// -----------------------------------------------------------------------
+
+bool Inputs::get_check_for_nans() {
+  return get_setting_bool("Debug", "check_for_nans");
+}
+
+// -----------------------------------------------------------------------
+// Checks to see if nan_test is needed
+// -----------------------------------------------------------------------
+
+bool Inputs::get_nan_test() {
+  return get_setting_bool("Debug", "nan_test", "insert");
+}
+
+// -----------------------------------------------------------------------
+// Returns which variable is being tested for nans
+// -----------------------------------------------------------------------
+
+std::string Inputs::get_nan_test_variable() {
+  return get_setting_str("Debug", "nan_test", "variable");
+}
 
 // -----------------------------------------------------------------------
 // Flag to have a latitude dependent radius, and by extension gravity
@@ -1150,8 +1060,9 @@ bool Inputs::get_do_lat_dependent_radius() {
 // Flag to include J2 term in the gravity calculation
 // -----------------------------------------------------------------------
 
-json Inputs::get_initial_condition_types() {
-  json values;
+bool Inputs::get_do_J2() {
+  return get_setting_bool("Oblate", "isJ2");
+}
 
 // -----------------------------------------------------------------------
 //

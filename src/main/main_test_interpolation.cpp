@@ -212,8 +212,14 @@ int main() {
         // Normal condition
         {
             std::cout << "\n\n\nNormal condition\n\n\n";
-            std::vector<precision_t> lon_in({0.1, 0.2, 0.3, 0.4, 2*cPI - 0.5, 2*cPI - 0.6, 2*cPI - 0.7, cPI, cPI});
-            std::vector<precision_t> lat_in({-cPI/2 + 0.5, -cPI/2 + 0.6, 0, 0.1, cPI/2 - 0.5, cPI/2 - 0.6, -0.1, -0.2, 0});
+            std::vector<precision_t> lon_in({0.1, 0.2, 0.3, 0.4, static_cast<precision_t>(2*cPI - 0.5), 
+                      static_cast<precision_t>(2*cPI - 0.6), static_cast<precision_t>(2*cPI - 0.7), cPI, cPI});
+
+            std::vector<precision_t> lat_in({static_cast<precision_t>(-cPI/2 + 0.5), 
+            static_cast<precision_t>(-cPI/2 + 0.6), 0, 0.1, 
+            static_cast<precision_t>(cPI/2 - 0.5), 
+            static_cast<precision_t>(cPI/2 - 0.6), -0.1, -0.2, 0});
+
             std::vector<precision_t> alt_in({100000, 150000, 200000, 250000, 300000, 350000, 120000, 225000, 225000});
 
             gGrid.set_interpolation_coefs(lon_in, lat_in, alt_in);

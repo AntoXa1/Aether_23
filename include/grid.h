@@ -163,7 +163,9 @@ public:
   void calc_alt_grid_spacing();
   void calc_lat_grid_spacing();
   void calc_long_grid_spacing();
+  
   void fill_grid_radius(Planets planet);
+
   void calc_rad_unit(Planets planet);
   void calc_gravity(Planets planet);
   bool init_geo_grid(Quadtree quadtree,
