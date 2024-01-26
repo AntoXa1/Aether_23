@@ -159,6 +159,12 @@ void transform_llr_to_xyz(precision_t llr_in[3], precision_t xyz_out[3]) {
   xyz_out[2] = llr_in[2] * sin(llr_in[1]);
 }
 
+std::vector<arma_cube> transform_xyz_to_llr_3d(std::vector<arma_cube> xyz){
+
+throw std::runtime_error("transform.cpp::transform_xyz_to_llr_3d is not implemented");
+
+}
+
 // -----------------------------------------------------------------------
 // Rotate 3D array (cube) around the z-axis
 //  - Angle needs to be in radians!!!

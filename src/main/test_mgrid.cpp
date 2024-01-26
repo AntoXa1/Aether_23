@@ -80,6 +80,10 @@ void WriteScatteredGridToFile(Grid grid){
 
 int main() {
 
+// asdf
+
+
+SHOW("test mgrid START")
   
   int iErr = 0;
   bool DidWork = true;
@@ -90,7 +94,6 @@ int main() {
   std::string function = "test_mgrid";
   static int iFunction = -1;
   report.enter(function, iFunction);
-
 
 
 cout<<"entering : "<< function <<endl;

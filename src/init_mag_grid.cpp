@@ -35,7 +35,7 @@ void GetDipoleXyz(double r_i, double ph_j, double q_i, double pLine,
       th = acos(pow(r_i,2)*q_i);
 }
 
-void quartFunAndDeriv(double &f, double &dfdx, double rt, double  pMag, double q) { 
+void QuartFunAndDeriv(double &f, double &dfdx, double rt, double  pMag, double q) { 
   double r=rt;
   f = pow(q,2)*pow(r,4) + r/pMag -1.0;
   dfdx = 4*pow(q,2)*pow(r,3) + 1/pMag;
@@ -53,10 +53,10 @@ void SolveDipoleEq(double &xRt, double pMag, double qMag){
 
   int maxExpandTrials=40;
 
-quartFunAndDeriv(fl,df, x1,pMag,qMag);
+QuartFunAndDeriv(fl,df, x1,pMag,qMag);
 
   for (int i =0; i<=maxExpandTrials; i++){ //correct the f+/- interval
-      quartFunAndDeriv(fh,df,x2,pMag,qMag);
+      QuartFunAndDeriv(fh,df,x2,pMag,qMag);
       // SHOW(x1);SHOW(x2);SHOW(fl);SHOW(fh); 
       if (fabs(fl) <= tol_){xRt=x1; return;};
       if (fabs(fh) <= tol_){xRt=x2; return;};
@@ -85,7 +85,7 @@ quartFunAndDeriv(fl,df, x1,pMag,qMag);
   dxold=fabs(x2-x1); //step
   dx=dxold;
 
-  quartFunAndDeriv(f,df,xRt,pMag,qMag);
+  QuartFunAndDeriv(f,df,xRt,pMag,qMag);
 
   for(int i=1; i<=maxit; i++){
         
@@ -108,7 +108,7 @@ quartFunAndDeriv(fl,df, x1,pMag,qMag);
     }
     if (fabs(dx) < tolRt_) return; //converging
     
-    quartFunAndDeriv(f,df,xRt,pMag,qMag);
+    QuartFunAndDeriv(f,df,xRt,pMag,qMag);
     
     if (f < 0.0){
       xl=xRt;
@@ -332,9 +332,7 @@ SHOW(q_i)
             SHOW(magP_scgc.n_slices); SHOW(nAlts);
             SHOW(qLin.size())
            
-            this->magP_scgc.tube(j_ph, l_qs).fill(ps); //p-grid is not independent: defined by the qs spacing
-            
-            
+            this->magP_scgc.tube(j_ph, l_qs).fill(ps); //p-grid is not independent: defined by the qs spacing                        
 
             double th_i = acos(qs);  
 
@@ -459,8 +457,12 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
   this->set_IsMagGrid(1);
 
   // This is just an example:  
-  Inputs::grid_input_struct grid_input = input.get_mgrid_inputs();
+  // AD ucomment below:
+  Inputs::grid_input_struct grid_input = input.get_mgrid_inputs(); 
   
+  
+  
+
   int64_t iLon, iLat, iAlt;
   
   // SHOW(grid_input.dalt); exit(10);
@@ -1256,7 +1258,12 @@ void Grid::init_dipole_grid(Quadtree quadtree, Planets planet, Inputs input, Rep
   xyzRot2 = rotate_around_z_3d(xyzRot1, magnetic_pole_rotation);
 
   // transform back to lon, lat, radius:
+  // from transform.cpp
+
+  // AD uncomment below:AD 
   llr = transform_xyz_to_llr_3d(xyzRot2);
+
+  
 
   geoLon_scgc = llr[0];
   geoLat_scgc = llr[1];

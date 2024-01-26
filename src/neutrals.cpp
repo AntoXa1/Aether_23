@@ -241,6 +241,7 @@ void Neutrals::fill_with_hydrostatic(int64_t iSpecies,
                                      int64_t iStart,
                                      int64_t iEnd,
                                      Grid grid) {
+  int64_t nAlts = grid.get_nAlts();
 
   // Integrate with hydrostatic equilibrium up:
   for (int iAlt = 1; iAlt < nAlts; iAlt++) {

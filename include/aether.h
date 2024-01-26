@@ -44,7 +44,10 @@ using json = nlohmann::json;
 // This is for manipulating strings
 #include <sstream>
 
+#include "transform.h"
+
 #include "mag_tools.h"
+
 
 // Contains all information about time in the code and wall time:
 #include "times.h"
@@ -130,7 +133,7 @@ using json = nlohmann::json;
 // not done
 #include "tools.h"
 // not done
-#include "transform.h"
+
 
 // not done
 #include "calc_grid_derived.h"

@@ -12,8 +12,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_COMPILER "/usr/bin/gcc")
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 
-# set(CMAKE_CXX_STANDARD 11)
-
 message(PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 # message(FATAL_ERROR "Foo")
 
@@ -40,6 +38,7 @@ message(RUN_DIR="${RUN_DIR}")
 message(OUT_DIR="${OUT_DIR}")
 
 
+
 # if(TEST_INTERPOLATION)
 #   add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/main_test_interpolation.cpp)
 # else()
@@ -59,9 +58,16 @@ elseif(TEST_GRADIENT)
 elseif(TEST_MGRID)
   # to use this, run:
   # cmake -DUSE_FORTRAN=ON -DTEST_MGRID=Y..
+  # cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_FORTRAN=ON -DTEST_MGRID=Y..
+  
   add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/test_mgrid.cpp)
+
   # add_executable(test_mgrid ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/test_mgrid.cpp)
+  
+  message(executable="${MAIN_DIR}/test_mgrid.cpp")
+
 else()
+
   add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${IE_FILES} ${MAIN_DIR}/main.cpp)
 endif()
 

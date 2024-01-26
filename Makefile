@@ -1305,30 +1305,6 @@ src/output.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/aether.dir/build.make CMakeFiles/aether.dir/src/output.cpp.s
 .PHONY : src/output.cpp.s
 
-src/output_binary.o: src/output_binary.cpp.o
-.PHONY : src/output_binary.o
-
-# target to build an object file
-src/output_binary.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/aether.dir/build.make CMakeFiles/aether.dir/src/output_binary.cpp.o
-.PHONY : src/output_binary.cpp.o
-
-src/output_binary.i: src/output_binary.cpp.i
-.PHONY : src/output_binary.i
-
-# target to preprocess a source file
-src/output_binary.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/aether.dir/build.make CMakeFiles/aether.dir/src/output_binary.cpp.i
-.PHONY : src/output_binary.cpp.i
-
-src/output_binary.s: src/output_binary.cpp.s
-.PHONY : src/output_binary.s
-
-# target to generate assembly for a file
-src/output_binary.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/aether.dir/build.make CMakeFiles/aether.dir/src/output_binary.cpp.s
-.PHONY : src/output_binary.cpp.s
-
 src/output_netcdf.o: src/output_netcdf.cpp.o
 .PHONY : src/output_netcdf.o
 
@@ -2037,9 +2013,6 @@ help:
 	@echo "... src/output.o"
 	@echo "... src/output.i"
 	@echo "... src/output.s"
-	@echo "... src/output_binary.o"
-	@echo "... src/output_binary.i"
-	@echo "... src/output_binary.s"
 	@echo "... src/output_netcdf.o"
 	@echo "... src/output_netcdf.i"
 	@echo "... src/output_netcdf.s"

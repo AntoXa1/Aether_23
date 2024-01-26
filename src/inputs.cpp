@@ -443,6 +443,13 @@ Inputs::grid_input_struct Inputs::get_grid_inputs() {
   return geo_grid_input;
 }
 
+Inputs::grid_input_struct Inputs::get_mgrid_inputs() {
+
+  cout<<"CURRENTLY EMPY FOR SOME REASON"<<endl;
+
+  return mag_grid_input;
+}
+
 // -----------------------------------------------------------------------
 // -----------------------------------------------------------------------
 // More complicated get functions:
