@@ -38,37 +38,17 @@ message(RUN_DIR="${RUN_DIR}")
 message(OUT_DIR="${OUT_DIR}")
 
 
-
-# if(TEST_INTERPOLATION)
-#   add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/main_test_interpolation.cpp)
-# else()
-#   add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/main.cpp)
-# endif()
-
-
-if(TEST_INTERPOLATION)
-  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${IE_FILES} ${MAIN_DIR}/main_test_interpolation.cpp)
-elseif(TEST_COORD)
-  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${IE_FILES} ${MAIN_DIR}/main_test_coord.cpp)
-elseif(TEST_EXCHANGE)
-  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${IE_FILES} ${MAIN_DIR}/main_test_exchange.cpp)
-  set(USE_DOUBLE_PRECISION True)
-elseif(TEST_GRADIENT)
-  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/main_test_gradient.cpp)
-elseif(TEST_MGRID)
+if(TEST_MGRID)
+    
   # to use this, run:
   # cmake -DUSE_FORTRAN=ON -DTEST_MGRID=Y..
   # cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_FORTRAN=ON -DTEST_MGRID=Y..
+  # add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/test_mgrid.cpp)    
   
-  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/test_mgrid.cpp)
-
-  # add_executable(test_mgrid ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/test_mgrid.cpp)
+  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${IE_FILES} ${MAIN_DIR}/main_test_mgrid.cpp)    
   
-  message(executable="${MAIN_DIR}/test_mgrid.cpp")
+  message(executable="${MAIN_DIR}/main_test_mgrid.cpp")
 
-else()
-
-  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${IE_FILES} ${MAIN_DIR}/main.cpp)
 endif()
 
 
@@ -81,13 +61,9 @@ endif()
 
 # Set compiler and cmake options
 # target_compile_options(aether PUBLIC -ffast-math -O3)
-target_compile_options(aether PUBLIC)
-# -Wc++17-extensions -Wfatal-errors
+target_compile_options(aether PUBLIC -std=c++17 -Wfatal-errors)
 
 set(SHARE_INCLUDE ${PROJECT_SOURCE_DIR}/share/include)
-
-# set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD 17)
 
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_FIND_ROOT_PATH ${SHARE_INCLUDE}

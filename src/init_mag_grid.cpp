@@ -125,8 +125,10 @@ QuartFunAndDeriv(fl,df, x1,pMag,qMag);
   
 }
 
-void Grid::initMagneticGrid(Planets planet, Inputs input, Report &report) {
-  std::string function = "Grid::init_mgrid";
+bool Grid::init_maggrid(Planets planet, Inputs input, Report &report) {
+  // filling the mag grid great again
+
+  std::string function = "Grid::init_mGrid";
   static int iFunction = -1;
   report.enter(function, iFunction);
   double cPI = 3.141592653589793238;
@@ -288,7 +290,7 @@ SHOW(q_i)
 
    if (nLats != nAlts){
     SHOW(nLats); SHOW(nAlts)
-    throw std::runtime_error("It should be nLats /= nAlts if QGRDTYPE==2 in  Grid::init_mgrid");
+    throw std::runtime_error("It should be nLats /= nAlts if QGRDTYPE==2 in  Grid::init_maggrid");
    } 
 
     SHOW(nLons); SHOW(nLats); SHOW(nAlts);
@@ -447,10 +449,11 @@ cout<<magPhi_scgc.n_rows<<"\n"<<magPhi_scgc.n_cols<<"\n"<<magPhi_scgc.n_slices<<
 
 
 
-void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
+bool Grid::init_mGrid(Planets planet, Inputs input, Report &report) {
   
   std::string function = "Grid::init_mag_grid";
   static int iFunction = -1;
+  bool didWork = true;
   report.enter(function, iFunction);
   
 // turn the switch on! 
@@ -487,7 +490,6 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
     }
   }
   
-
   // cout << "from"<< function<< "nLats=  "<< nLats<<"\n"<<endl;
 
   magPhi_scgc = magLon_scgc;
@@ -742,6 +744,7 @@ void Grid::init_mag_grid(Planets planet, Inputs input, Report &report) {
 //  fill_dipole_q_line(qN, qS, Gamma, nZ, Lshell, Lon, q, report);
 //  
   report.exit(function);
+  return didWork;
 }
 
 // ----------------------------------------------------------------------

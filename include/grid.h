@@ -171,11 +171,10 @@ public:
   bool init_geo_grid(Quadtree quadtree,
 		     Planets planet);
   
-  void initMagneticGrid(Planets planet, Inputs input, Report &report);
-
-  void init_mag_grid(Planets planet, Inputs input, Report &report);
-
+  bool init_maggrid(Planets planet, Inputs input, Report &report);//a new scheme of pq-distribution
+  bool init_mGrid(Planets planet, Inputs input, Report &report);
   void init_dipole_grid(Quadtree quadtree, Planets planet, Inputs input, Report &report);
+
   void create_sphere_connection(Quadtree quadtree);
   void create_sphere_grid(Quadtree quadtree);
   void create_cubesphere_connection(Quadtree quadtree);
