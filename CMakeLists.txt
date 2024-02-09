@@ -45,8 +45,7 @@ if(TEST_MGRID)
   # cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_FORTRAN=ON -DTEST_MGRID=Y..
   # add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${MAIN_DIR}/test_mgrid.cpp)    
   
-  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${IE_FILES} ${MAIN_DIR}/main_test_mgrid.cpp)    
-  
+  add_executable(aether ${SRC_FILES} ${MSIS_FILES} ${IE_FILES} ${MAIN_DIR}/main_test_mgrid.cpp)      
   message(executable="${MAIN_DIR}/main_test_mgrid.cpp")
 
 endif()
@@ -92,6 +91,11 @@ if(BLAS_FOUND AND LAPACK_FOUND)
 elseif(ARMADILLO_FOUND)
   message(WARNING "BLAS and LAPACK not found. Matrix operation will be slower.")
   target_link_libraries(aether PUBLIC ${ARMADILLO_LIBRARIES})
+endif()
+
+find_package(nlohmann_json REQUIRED)
+if (NOT nlohmann_json_FOUND)
+  message(FATAL_ERROR "nlohmann/json library not found. Please install it.")
 endif()
 
 find_package(OpenMP)

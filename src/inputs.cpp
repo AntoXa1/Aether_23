@@ -391,7 +391,6 @@ std::string Inputs::check_settings_str(std::string key) {
     isOk = false;
     return dummy_string;
   }
-
   return settings[key];
 }
 
@@ -866,6 +865,22 @@ int Inputs::get_nLatsGeo() {
 }
 
 int Inputs::get_nAltsGeo() {
+  return check_settings_pt("GeoBlockSize", "nAlts");
+}
+
+// -----------------------------------------------------------------------
+// Return number of longitudes, latitudes, and altitudes in Mag grid: currently the same as Geo grid
+// -----------------------------------------------------------------------
+
+int Inputs::get_nLonsMag() {
+  return check_settings_pt("GeoBlockSize", "nLons");
+}
+
+int Inputs::get_nLatsMag() {
+  return check_settings_pt("GeoBlockSize", "nLats");
+}
+
+int Inputs::get_nAltsMag() {
   return check_settings_pt("GeoBlockSize", "nAlts");
 }
 

@@ -65,6 +65,8 @@ public:
   arma_cube magLat_scgc, magY_scgc, magP_scgc;
   arma_cube magAlt_scgc, magZ_scgc, magQ_scgc;
   arma_cube magLocalTime_scgc;
+  
+  arma_cube magMask;
 
 
   // These are the locations of the magnetic poles:
@@ -150,10 +152,15 @@ public:
   int64_t get_nLons();
   int64_t get_nLats();
   int64_t get_nAlts();
+  
+  int64_t get_nLonsMag();
+  int64_t get_nLatsMag();
+  int64_t get_nAltsMag();
 
   int64_t get_nGCs();
 
   void fill_grid(Planets planet);
+
   void correct_xy_grid(Planets planet);
   void calc_sza(Planets planet, Times time);
   void calc_gse(Planets planet, Times time);
@@ -276,9 +283,9 @@ public:
                  
   bool HasBField;
 
-  int64_t nX, nLons;
-  int64_t nY, nLats;
-  int64_t nZ, nAlts;
+  int64_t nX, nLons, nLonsMag;
+  int64_t nY, nLats, nLatsMag;
+  int64_t nZ, nAlts, nAltsMag;
 
   int nGCs; // number of ghostcells
 

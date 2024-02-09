@@ -79,12 +79,7 @@ void WriteScatteredGridToFile(Grid grid){
 }
 
 int main() {
-
-
-
-
-  SHOW("test mgrid START")
-    
+      
   int iErr = 0;
   bool didWork = true;
   Times time;
@@ -95,27 +90,32 @@ int main() {
   static int iFunction = -1;
   report.enter(function, iFunction);
 
-
-  cout<<"entering : "<< function <<endl;
+  cout<<"entering : \n"<< function <<endl;
   // std::filesystem :: path cwd = std::filesystem::current_path();
-
 
   // string :: path_to_rundir = ""
     // Create inputs (reading the input file):
     input = Inputs(time);
     
+
     // Initialize the EUV system:
     // Euv euv(input, report);
   // cout<<"passed .. \n";
     
   Quadtree quadtree;
   if (!quadtree.is_ok()) throw std::string("quadtree initialization failed!");    
+  SHOW("mgrid: did quadtree \n")
 
   didWork = init_parallel(quadtree);
+  if (!didWork) throw std::string("init_parallel(quadtree) failed!");
+// SHOW("mgrid: did until this place \n")
+
 
   // Initialize the planet:
-  Planets planet;
+  Planets planet;   
+  if (!planet.is_ok()) throw std::string("planet initialization failed!"); 
 
+  
   // Initialize the indices (and read the files):
   Indices indices;
   didWork = read_and_store_indices(indices);    
@@ -129,7 +129,8 @@ int main() {
   // MPI_Barrier(aether_comm);
   if (!didWork) throw std::string("init_geo_grid failed!");  
 
-  gGrid.fill_grid(planet);
+  // gGrid.fill_grid(planet);
+
   gGrid.report_grid_boundaries();
 
   SHOW(gGrid.geoX_scgc(1,1,1)) 
@@ -151,12 +152,12 @@ int main() {
   if (!didWork)throw std::string("init_geo_grid failed!");
   cout << "initMagneticGrid done"<< endl;
 
-  mGrid.fill_grid(planet);
+  // mGrid.fill_grid(planet);
   mGrid.fill_grid_radius(planet);
 
   int iAlt=0; int iLon=0, iLat =0;
   for (int i=1; i<mGrid.get_nAlts(); i++){
-    SHOW(mGrid.radius_scgc(iLon,iLat, i)); 
+    SHOW(mGrid.radius_scgc(iLon,iLat, i));
     SHOW(mGrid.geoAlt_scgc(iLon,iLat, i));    
     SHOW(i);
   }
@@ -182,9 +183,9 @@ int main() {
 
     
       
-      //  for (int i=1; i < gGrid.get_nAlts(); i++)
-   //   SHOW( gGrid.radius_scgc(iLon,iLat, i) );          
-    // SHOW(input.get_nAltsMag())    
+  // for (int i=1; i < gGrid.get_nAlts(); i++)
+  // SHOW( gGrid.radius_scgc(iLon,iLat, i) );          
+  // SHOW(input.get_nAltsMag())    
   // int  Nq =10;
   // int tPower =1;
   // DipoleLine mLine(Nq,tPower);

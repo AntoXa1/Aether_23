@@ -6,9 +6,9 @@
 #define SHOW(x) std::cout << #x"=" << x << std::endl;
 // prints "varible name" = variable
 
-#define PLOT(v) PrintToFileAndExecCompanionPlotScript(v, #v);
+#define PLOT(v) PrintToFileAndRunCompanionPlotScript(v, #v);
 
-#define SPLOT(x,y,n) PrintToFileAndExecCompanionScatterPlotScript(x,y,n);
+#define SPLOT(x,y,n) PrintToFileAndRunCompanionScatterPlotScript(x,y,n);
 
 #include <vector>
 
@@ -36,7 +36,7 @@ std::vector<double> linspace(T start_in, T end_in, int num_in)
 
 
 template <typename T>
-void PrintToFileAndExecCompanionPlotScript(T x, const std::string& name) { 
+void PrintToFileAndRunCompanionPlotScript(T x, const std::string& name) { 
   // std::string cwd = "/Users/dorodnitsyn/WORK/PROJECTS/Aether_pub/Aether/run.test_mgrid";
 
   char cwd_[100];
@@ -105,28 +105,22 @@ void PrintToFileAndExecCompanionPlotScript(T x, const std::string& name) {
 //   SHOW(pyFileToExecute)
 
 template <typename T>
-void PrintToFileAndExecCompanionScatterPlotScript(T x, T y, int len) { 
-  //pring two columns of the length, len
-  
-  std::string cwd = "/Users/dorodnitsyn/WORK/PROJECTS/Aether_pub/Aether/run.test_mgrid";
-
-char cwd1[100];
-std::string fdir(getcwd(cwd1, sizeof(cwd1)));
-auto fileName = fdir + "/" + "_data.dat";   
-SHOW(fileName) 
-SHOW(len)
-
+void PrintToFileAndRunCompanionScatterPlotScript(T x, T y, int len) { 
+  //print two columns of the length, len
+  char cwd1[100];
+  std::string fdir(getcwd(cwd1, sizeof(cwd1)));
+  auto fileName = fdir + "/" + "_data.dat";   
+  SHOW(fileName) 
+  SHOW(len)
     std::ofstream output_file(fileName);
-
     for (int i = 0; i < len; i++) {        
           output_file << x[i] <<"\t"<< y[i]<< std::endl;           
     }
     output_file.close();
     // exit(10);
 
-
-  // const std::string pyFileToExecute = fdir + "/" + "./_myscat.py";
-  const std::string pyFileToExecute = fdir + "/" + "./plot_from_cpp.jl";
+  const std::string pyFileToExecute = fdir + "/" + "./_myscat.py";
+  // const std::string pyFileToExecute = fdir + "/" + "./plot_from_cpp.jl";
   SHOW(pyFileToExecute)
   
   system(pyFileToExecute.c_str());

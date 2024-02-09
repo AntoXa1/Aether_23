@@ -107,6 +107,8 @@ Grid::Grid(int nX_in, int nY_in, int nZ_in, int nGCs_in) {
   magZ_scgc.set_size(nX, nY, nZ);
 
   magLocalTime_scgc.set_size(nX, nY, nZ);
+  
+  magMask.set_size(nX, nY, nZ);
 
   radius_scgc.set_size(nX, nY, nZ);
   radius2_scgc.set_size(nX, nY, nZ);
@@ -389,7 +391,20 @@ int64_t Grid::get_nLats() {
 int64_t Grid::get_nAlts() {
   return nAlts;
 }
+int64_t Grid::get_nLonsMag() {
+  return nLonsMag;
+}
+int64_t Grid::get_nLatsMag() {
+  return nLatsMag;
+}
+int64_t Grid::get_nAltsMag() {
+  return nAltsMag;
+}
+
+
+
 
 int64_t Grid::get_nGCs() {
   return nGCs;
 }
+

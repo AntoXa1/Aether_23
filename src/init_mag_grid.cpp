@@ -53,7 +53,7 @@ void SolveDipoleEq(double &xRt, double pMag, double qMag){
 
   int maxExpandTrials=40;
 
-QuartFunAndDeriv(fl,df, x1,pMag,qMag);
+  QuartFunAndDeriv(fl,df, x1,pMag,qMag);
 
   for (int i =0; i<=maxExpandTrials; i++){ //correct the f+/- interval
       QuartFunAndDeriv(fh,df,x2,pMag,qMag);
@@ -125,10 +125,70 @@ QuartFunAndDeriv(fl,df, x1,pMag,qMag);
   
 }
 
+void GetPsFromQs(double &ps, double qs, double &thetaOfPs){  
+  //for a given q calculates corresponding p_s and l_s
+  double psSmall = 1.e-3;
+  ps = 1.0/(1.0-pow(qs,2)); //find corresponding p_s(q_s)
+  thetaOfPs = asin( sqrt( 1./ std::max(ps,psSmall) ) );
+
+  return;
+}
+      
+void ProjectQsOnAllMagLinesAnsMask(Grid *grid, std::vector<double> q1d, 
+                            int j_ph, int iOfQs, int lOfPs){
+  assert(q1d.size() % 2 == 0 && "size of q1d must be even ");  
+
+  int iMax=q1d.size();
+  int iEq = iMax/2;
+  
+  double qs = q1d[iOfQs];
+
+
+  if (qs<0){
+    for (int i = 0; i < iEq; i++) 
+        grid->magMask(j_ph, lOfPs, i) = (i<iOfQs) ? 0.0 : 1.0;
+    
+  } else if (qs>0){
+  
+    for (int i = iEq; i < iMax; i++) 
+        grid->magMask(j_ph, lOfPs, i) = (i<iOfQs) ? 1.0 : 0.0;
+  
+  } else{
+    throw("qs=0: not allowed in init_mag.cpp");
+  }
+
+  return;
+}
+
+void ScatPlotArmaArray(std::vector<double> q1d, std::vector<double> p1d, arma_cube magMask, int IdLon){
+  //print three columns of data for a scatter plotp1d.size();
+  
+  char cwd1[100];
+  std::string fdir(getcwd(cwd1, sizeof(cwd1)));
+  auto fileName = fdir + "/" + "_2ddata.dat";   
+  SHOW(fileName) 
+  int len1 = q1d.size();
+  int len2 = p1d.size();
+  
+    std::ofstream output_file(fileName);
+    
+    for (int j = 0; j < len2; j++) {        
+      for (int i = 0; i < len1; i++) {                
+            output_file << q1d[i] <<"\t"<< p1d[j]<<"\t"<<magMask(IdLon,j,i) <<std::endl;           
+      }
+    }
+    output_file.close();    
+  const std::string pyFileToExecute = fdir + "/" + "./_my_scat_plot_arma_array.py";  
+  SHOW(pyFileToExecute)  
+  system(pyFileToExecute.c_str());
+}
+
+
+
 bool Grid::init_maggrid(Planets planet, Inputs input, Report &report) {
   // filling the mag grid great again
 
-  std::string function = "Grid::init_mGrid";
+  std::string function = "Grid::init_maggrid";
   static int iFunction = -1;
   report.enter(function, iFunction);
   double cPI = 3.141592653589793238;
@@ -183,7 +243,6 @@ bool Grid::init_maggrid(Planets planet, Inputs input, Report &report) {
   th_ = linspace(th_s,th_e, N_mLines);
 
   // SPLOT(t01,t01,Nq)
-
   // if(N_mLines>1){
   // th_ = linspace(th_s,th_e, N_mLines);
   // } 
@@ -287,6 +346,8 @@ SHOW(q_i)
 // in the ph-p-q grid the "lon"=ph, "lat"=p, "alt"=q
 
 #elif QGRDTYPE==2
+   int lOfPs;
+   double pOfQs,thetaOfPs;
 
    if (nLats != nAlts){
     SHOW(nLats); SHOW(nAlts)
@@ -302,87 +363,121 @@ SHOW(q_i)
       minAbsQ = 0.05;
 
     // construct a temporary q-grid
-    std::vector<double> qLin;   
+    std::vector<double> q1d;        
     
-    HalfAndHalfLinrange(qLin, Nalts,qL, qR, minAbsQ);    
-    // SPLOT(qLin,qLin,Nlats); exit(10);
+    // fill q vec with values
+    HalfAndHalfLinrange(q1d, Nalts,qL, qR, minAbsQ);
     
+    std::vector<double> p1d(q1d.size());  
+    // SHOW(q1d.size())
+    // SPLOT(q1d,q1d,Nlats); exit(10);
     
     // begin populating a 3D: ph,p,q -grid
-    for (int j_ph=0; j_ph<nLons; j_ph++){
+    int nGhostZones = 4;
+    int nLonsMax = nLons-nGhostZones;
 
-      SHOW(j_ph)
-      double ph_j = ph_[j_ph];
-          
-      magLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
-      this->geoLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
-      this->magLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
+    for (int j_lon=0; j_lon<nLonsMax; j_lon++){
 
-            SHOW(this->magQ_scgc.n_rows)
-            SHOW(this->magQ_scgc.n_cols)
-            SHOW(this->magQ_scgc.n_slices)
+      SHOW(j_lon)
 
+      double ph_j = ph_[j_lon];
+                
+      this->magLon_scgc.subcube(j_lon, 0, 0, j_lon, nLats-1, nAlts-1).fill(ph_j);
+      this->geoLon_scgc.subcube(j_lon, 0, 0, j_lon, nLats-1, nAlts-1).fill(ph_j);
+      
+      for(int i_q=0; i_q<Nalts; i_q++){
+        double qs = q1d[i_q];
+        lOfPs = i_q;
+
+        GetPsFromQs(pOfQs,qs,thetaOfPs);
+                
+        p1d[lOfPs] = pOfQs;
+
+        //p-grid is not independent: defined by the qs spacing:
+        this->magP_scgc.tube(j_lon, lOfPs).fill(pOfQs); 
+
+        SHOW(p1d[lOfPs])
+        SHOW(q1d[i_q])
+        SHOW(thetaOfPs)
+        SHOW(" ")
+         ProjectQsOnAllMagLinesAnsMask(this,q1d,j_lon,i_q,lOfPs);
+      }
+
+      ScatPlotArmaArray(q1d,p1d,magMask,j_lon);
+
+exit(10);
+
+//             SHOW(this->magQ_scgc.n_rows)
+//             SHOW(this->magQ_scgc.n_cols)
+//             SHOW(this->magQ_scgc.n_slices)
+    
             
-          for (int l_qs = 0; l_qs < Nlats; l_qs++){  // for (int l_qs = qLin.size()-1; l_qs >= 0; l_qs--){
+//           for (int l_qs = 0; l_qs < Nlats; l_qs++){  // for (int l_qs = q1d.size()-1; l_qs >= 0; l_qs--){
             
-            double qs = qLin[l_qs];
-            double ps = 1.0/(1.0-pow(qs,2));
+//             double qs = q1d[l_qs];
+//             double ps = 1.0/(1.0-pow(qs,2)); //find corresponding p_s(q_s)
 
-            SHOW(ps)
-            SHOW(magP_scgc.n_rows)
-            SHOW(magP_scgc.n_cols)
-            SHOW(magP_scgc.n_slices); SHOW(nAlts);
-            SHOW(qLin.size())
+//             SHOW(ps)
+//             SHOW(magP_scgc.n_rows)
+//             SHOW(magP_scgc.n_cols)
+//             SHOW(magP_scgc.n_slices); 
+//             SHOW(nAlts);
+//             SHOW(q1d.size())
            
-            this->magP_scgc.tube(j_ph, l_qs).fill(ps); //p-grid is not independent: defined by the qs spacing                        
+//             this->magP_scgc.tube(j_ph, l_qs).fill(ps); 
+//             //p-grid is not independent: defined by the qs spacing                        
 
-            double th_i = acos(qs);  
+//             double th_i = acos(qs);  
 
-            std::cout << "\n qs,ps = "<< qs << "; " << ps << "; " << th_i/cPI*180<<endl;
+//             std::cout << "\n qs,ps = "<< qs << "; " << ps << "; " << th_i/cPI*180<<endl;
                         
-            int delt_i = (qs>0) ? -1:1;            
+//             int delt_i = (qs>0) ? -1:1;            
             
-            int i_q = l_qs;
+//             int i_q = l_qs;
             
-            double  qNotCrossZero = qLin[i_q]*qLin[i_q+delt_i];
+//             double  qNotCrossZero = q1d[i_q]*q1d[i_q+delt_i];
             
-            SHOW(i_q); SHOW(delt_i); SHOW(qNotCrossZero)
+//             SHOW(i_q); SHOW(delt_i); SHOW(qNotCrossZero)
             
-            while (qNotCrossZero > 0){
-              // for simplicity, we populate q-grid as we go along a given magnetic line from bottom towards the end          
-              // that it the direction of this passage is important if we want to have a condistent q-grid
+//             while (qNotCrossZero > 0){
+//               // for simplicity, we populate q-grid as we go along a given magnetic line from bottom towards the end          
+//               // that it the direction of this passage is important if we want to have a condistent q-grid
 
-              q_i = qLin[i_q];
+//               q_i = q1d[i_q];
               
-              SolveDipoleEq(r_i, ps, q_i);
-              GetDipoleXyz(r_i, ph_j, q_i, ps, x_ij, y_ij, z_ij, th_ij);              
+//               SolveDipoleEq(r_i, ps, q_i);
+//               GetDipoleXyz(r_i, ph_j, q_i, ps, x_ij, y_ij, z_ij, th_ij);              
 
                             
-              this->geoLat_scgc(j_ph, l_qs, i_q) = this->magLat_scgc(j_ph, l_qs, i_q) = th_ij;
-              this->geoAlt_scgc(j_ph, l_qs, i_q) = this->magAlt_scgc(j_ph, l_qs, i_q) = r_i*radius0;              
+//               this->geoLat_scgc(j_ph, l_qs, i_q) = this->magLat_scgc(j_ph, l_qs, i_q) = th_ij;
+//               this->geoAlt_scgc(j_ph, l_qs, i_q) = this->magAlt_scgc(j_ph, l_qs, i_q) = r_i*radius0;              
                                                                                     
-              magX_scgc(j_ph, l_qs, i_q) = x_ij;
-              magY_scgc(j_ph, l_qs, i_q) = y_ij;
-              magZ_scgc(j_ph, l_qs, i_q) = z_ij;
+//               magX_scgc(j_ph, l_qs, i_q) = x_ij;
+//               magY_scgc(j_ph, l_qs, i_q) = y_ij;
+//               magZ_scgc(j_ph, l_qs, i_q) = z_ij;
 
-              std::cout <<" i_q,q,r_i:  " << i_q << "; " << qLin[i_q] << "; "<<r_i<<endl;
-              qNotCrossZero = qLin[i_q]*qLin[i_q+delt_i]; 
+//               std::cout <<" i_q,q,r_i:  " << i_q << "; " << q1d[i_q] << "; "<<r_i<<endl;
+//               qNotCrossZero = q1d[i_q]*q1d[i_q+delt_i]; 
+// SHOW(qNotCrossZero)
+//               i_q = i_q + delt_i;              
 
-              i_q = i_q + delt_i;              
+//             } 
+            
 
-            }              
-            cout<<" end of the line -------- "<<endl;                  
-            // SPLOT(LinesXx.tube(j_ph, l),LinesZz.tube(j_ph, l),Nq)
+//             cout<<" end of the line -------- "<<endl;                  
+//             // SPLOT(LinesXx.tube(j_ph, l),LinesZz.tube(j_ph, l),Nq)
 
-            // copy to the grid:
-            for(int i=0; i<nAlts; i++){
-              this->magQ_scgc(j_ph, l_qs, i) = qLin[i]; // SHOW(qLin[i])
-            }
+//             // copy to the grid:
+//             for(int i=0; i<nAlts; i++){
+//               this->magQ_scgc(j_ph, l_qs, i) = q1d[i]; // SHOW(q1d[i])
+//             }
 
 
-          }
+//           }
                                     
-        SHOW(j_ph); 
+        SHOW(j_lon); 
+
+
 
                 
           // exit(10);
@@ -392,9 +487,9 @@ SHOW(q_i)
 double x_ij, y_ij, z_ij, th_ij, ph_j;
 double qL = - 0.9, qR = fabs(qL), minAbsQ = 0.05;
 // construct a temporary q-grid
-std::vector<double> qLin;   
+std::vector<double> q1d;   
     
-HalfAndHalfLinrange(qLin, Nalts,qL, qR, minAbsQ);    
+HalfAndHalfLinrange(q1d, Nalts,qL, qR, minAbsQ);    
    
 // begin populating a 3D: ph,p,q -grid
 for (int j_ph=0; j_ph<nLons; j_ph++){  
@@ -422,7 +517,7 @@ for (int j_ph=0; j_ph<nLons; j_ph++){
           throw std::runtime_error("unknown QGRDTYPE in  Grid::init_mgrid");
 #endif        
 
-  // exit(10);
+// exit(10);
 
 // turn the switch on! 
   this->set_IsMagGrid(1);

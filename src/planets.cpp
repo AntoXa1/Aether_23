@@ -14,15 +14,16 @@
 // -----------------------------------------------------------------------------
 
 Planets::Planets() {
+
   IsOk = read_file();
+  
 
-  if (IsOk)
-    IsOk = set_planet();
+  if (IsOk) IsOk = set_planet();
 
-  if (IsOk)
-    IsOk = read_planet_specific_file();
+  if (IsOk) IsOk = read_planet_specific_file();
 
-  IsOk = sync_across_all_procs(IsOk);
+   IsOk = sync_across_all_procs(IsOk);
+
 }
 
 // -----------------------------------------------------------------------------
@@ -306,7 +307,13 @@ bool Planets::set_planet() {
   int iSize = planets.size();
 
   for (int i = 0; i < iSize; i++) {
+    SHOW(planets[i].name)
+    auto tmp = input.get_planet();
+    
     if (planets[i].name == input.get_planet()) {
+      
+      
+
       IsFound = 1;
       planet.name = planets[i].name;
 
@@ -517,6 +524,8 @@ bool Planets::read_planet_specific_file() {
   report.enter(function, iFunction);
 
   int iDebug = 4;
+
+auto tmp=input.get_planet_species_file();
 
   infile_ptr.open(input.get_planet_species_file());
 
