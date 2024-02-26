@@ -210,10 +210,7 @@ void Grid::fill_grid_radius(Planets planet) {
   std::string function = "Grid::fill_grid_radius";
   static int iFunction = -1;
   report.enter(function, iFunction);
-
   int64_t iLon, iLat, iAlt;
-
-
 
   // This generalizes things so that radius could be a function of all
   // three dimensions.  The Cubesphere has different latitudes in the first
@@ -226,7 +223,6 @@ void Grid::fill_grid_radius(Planets planet) {
           planet.get_radius(geoLat_scgc(iLon, iLat, iAlt));
 
   radius_scgc = radius_scgc + geoAlt_scgc;
-
   radius2_scgc = radius_scgc % radius_scgc;
   radius2i_scgc = 1.0 / radius2_scgc;
 

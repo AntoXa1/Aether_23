@@ -75,6 +75,8 @@ Neutrals::Neutrals(Grid grid,
 
   int iErr;
   bool didWork = true;
+  int isMagGrid = grid.get_IsMagGrid();
+
   species_chars tmp;
 
   int64_t nLons = grid.get_nLons();

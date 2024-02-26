@@ -139,6 +139,8 @@ int main() {
   // Initialize Neutrals on geographic grid:
   Neutrals neutrals(gGrid, planet, time, indices);
 
+
+
   // Initialize Ions on geographic grid:
   Ions ions(gGrid, planet);
 
@@ -149,10 +151,20 @@ int main() {
 
   didWork = mGrid.init_maggrid(planet, input, report);
   // MPI_Barrier(aether_comm);
-  if (!didWork)throw std::string("init_geo_grid failed!");
+  
+  if (!didWork)throw std::string("init_mag_grid failed!");
+  
   cout << "initMagneticGrid done"<< endl;
 
+
+// //calculate radial unit vector (for spherical or oblate planet)
+  mGrid.calc_rad_unit(planet);
+
   // mGrid.fill_grid(planet);
+
+  // kinda makes not much sence for the mgrid:
+  mGrid.calc_gravity(planet);
+
   mGrid.fill_grid_radius(planet);
 
   int iAlt=0; int iLon=0, iLat =0;
@@ -166,9 +178,11 @@ int main() {
     Neutrals mNeutrals(mGrid, planet, time, indices);  
     cout<<" Initialize Neutrals on dipole grid: done .."<<endl;
 
+
   // Initialize Ions on m-geographic grid:
     Ions mIons(mGrid, planet);
-    cout<<"Initialize Ions on m-geographic grid: done .."<<endl;
+    cout<<"Initialize Ions on m-geographic grid: done .."<<endl; 
+    
 
   // Once EUV, neutrals, and ions have been defined, pair cross sections
   // Initialize the EUV system:    

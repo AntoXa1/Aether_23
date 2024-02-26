@@ -11,6 +11,31 @@
 
 #define WLEVEL 0
 #define QGRDTYPE 2
+ 
+ void NeutralSpeciesFillMagLine(){
+
+    int64_t nAlts = grid.get_nAlts();
+
+  for (int iAlt = 1; iAlt < nAlts; iAlt++) {
+    species[iSpecies].density_scgc.slice(iAlt) =
+      temperature_scgc.slice(iAlt - 1) /
+      temperature_scgc.slice(iAlt) %
+      species[iSpecies].density_scgc.slice(iAlt - 1) %
+      exp(-grid.dalt_lower_scgc.slice(iAlt) /
+          species[iSpecies].scale_height_scgc.slice(iAlt));
+  }
+
+
+ }
+
+void NeutralSpeciesFillFullMagGrid(){
+
+// cycle through the range of the grid
+  
+}
+
+
+
 
 void HalfAndHalfLinrange(std::vector<double>& qLin, int size, double xL, double xR, 
                     double offSetFromMid){    
@@ -41,6 +66,7 @@ void QuartFunAndDeriv(double &f, double &dfdx, double rt, double  pMag, double q
   dfdx = 4*pow(q,2)*pow(r,3) + 1/pMag;
   return ;
 }
+
 
 void SolveDipoleEq(double &xRt, double pMag, double qMag){
 
@@ -183,6 +209,46 @@ void ScatPlotArmaArray(std::vector<double> q1d, std::vector<double> p1d, arma_cu
   system(pyFileToExecute.c_str());
 }
 
+void FillAllCoordsOnMagGrid(Grid *grid, std::vector<double> q1d, 
+                                         std::vector<double> p1d, 
+                                         std::vector<double> phiLon, int idOfLon){
+  int Nlats=grid->get_nLats();
+  int Nalts=grid->get_nAlts();
+  
+  int nQmag=p1d[q1d.size()];
+
+  int nPmag=p1d.size();  
+  double pj,qi,ri = 0.9;
+  double x, y, z, th;  
+  int isOnGrid = -1;
+
+  double ph_j = phiLon[idOfLon];
+
+  for (int j_p=0; j_p<Nlats; j_p++){
+    pj = p1d[j_p];
+    for(int i_q=0; i_q<Nalts; i_q++){
+      
+      isOnGrid = grid->magMask(idOfLon, j_p, i_q);
+
+      qi = q1d[i_q];
+      if(isOnGrid==1) {
+        SolveDipoleEq(ri, pj, qi); // SHOW(ri)
+        } else {
+          ri=0.0;  
+        }
+      
+
+      GetDipoleXyz(ri, ph_j, qi, pj, x, y, z, th); 
+
+      grid->magX_scgc(idOfLon, j_p, i_q) = x;
+      grid->magY_scgc(idOfLon, j_p, i_q) = y;
+      grid->magZ_scgc(idOfLon, j_p, i_q) = z;
+      grid->magQ_scgc(idOfLon, j_p, i_q) = q1d[i_q]; 
+      grid->magQ_scgc(idOfLon, j_p, i_q) = p1d[j_p]; 
+
+    }
+  }
+}
 
 
 bool Grid::init_maggrid(Planets planet, Inputs input, Report &report) {
@@ -375,13 +441,14 @@ SHOW(q_i)
     // begin populating a 3D: ph,p,q -grid
     int nGhostZones = 4;
     int nLonsMax = nLons-nGhostZones;
-
-    for (int j_lon=0; j_lon<nLonsMax; j_lon++){
-
-      SHOW(j_lon)
-
+    
+    //phi -iteration:
+    for (int j_lon=0; j_lon < nLonsMax; j_lon++){ 
+      
       double ph_j = ph_[j_lon];
-                
+      
+      // SHOW(j_lon); SHOW(nLonsMax); SHOW(ph_j); exit(10);
+
       this->magLon_scgc.subcube(j_lon, 0, 0, j_lon, nLats-1, nAlts-1).fill(ph_j);
       this->geoLon_scgc.subcube(j_lon, 0, 0, j_lon, nLats-1, nAlts-1).fill(ph_j);
       
@@ -389,23 +456,34 @@ SHOW(q_i)
         double qs = q1d[i_q];
         lOfPs = i_q;
 
-        GetPsFromQs(pOfQs,qs,thetaOfPs);
-                
+        GetPsFromQs(pOfQs,qs,thetaOfPs);                
         p1d[lOfPs] = pOfQs;
-
         //p-grid is not independent: defined by the qs spacing:
         this->magP_scgc.tube(j_lon, lOfPs).fill(pOfQs); 
-
-        SHOW(p1d[lOfPs])
-        SHOW(q1d[i_q])
-        SHOW(thetaOfPs)
-        SHOW(" ")
-         ProjectQsOnAllMagLinesAnsMask(this,q1d,j_lon,i_q,lOfPs);
+        // SHOW(p1d[lOfPs]);SHOW(q1d[i_q]);SHOW(thetaOfPs);SHOW(" ")
+        
+        
+        ProjectQsOnAllMagLinesAnsMask(this,q1d,j_lon,i_q,lOfPs);
+      
       }
 
-      ScatPlotArmaArray(q1d,p1d,magMask,j_lon);
+      FillAllCoordsOnMagGrid(this,q1d,p1d,ph_,j_lon);
 
-exit(10);
+
+      // ScatPlotArmaArray(q1d,p1d,magMask,j_lon);
+
+      SHOW(j_lon);                         
+      
+    } //phi integration
+#endif        
+// turn the switch on! 
+  this->set_IsMagGrid(1);
+  
+
+return(true);
+
+} 
+
 
 //             SHOW(this->magQ_scgc.n_rows)
 //             SHOW(this->magQ_scgc.n_cols)
@@ -452,9 +530,6 @@ exit(10);
 //               this->geoLat_scgc(j_ph, l_qs, i_q) = this->magLat_scgc(j_ph, l_qs, i_q) = th_ij;
 //               this->geoAlt_scgc(j_ph, l_qs, i_q) = this->magAlt_scgc(j_ph, l_qs, i_q) = r_i*radius0;              
                                                                                     
-//               magX_scgc(j_ph, l_qs, i_q) = x_ij;
-//               magY_scgc(j_ph, l_qs, i_q) = y_ij;
-//               magZ_scgc(j_ph, l_qs, i_q) = z_ij;
 
 //               std::cout <<" i_q,q,r_i:  " << i_q << "; " << q1d[i_q] << "; "<<r_i<<endl;
 //               qNotCrossZero = q1d[i_q]*q1d[i_q+delt_i]; 
@@ -475,63 +550,42 @@ exit(10);
 
 //           }
                                     
-        SHOW(j_lon); 
 
-
-
-                
-          // exit(10);
-} //phi integration
-
-#elif QGRDTYPE==3
-double x_ij, y_ij, z_ij, th_ij, ph_j;
-double qL = - 0.9, qR = fabs(qL), minAbsQ = 0.05;
+// #elif QGRDTYPE==3
+// double x_ij, y_ij, z_ij, th_ij, ph_j;
+// double qL = - 0.9, qR = fabs(qL), minAbsQ = 0.05;
 // construct a temporary q-grid
-std::vector<double> q1d;   
-    
-HalfAndHalfLinrange(q1d, Nalts,qL, qR, minAbsQ);    
+// std::vector<double> q1d;       
+// HalfAndHalfLinrange(q1d, Nalts,qL, qR, minAbsQ);    
    
 // begin populating a 3D: ph,p,q -grid
-for (int j_ph=0; j_ph<nLons; j_ph++){  
-  ph_j = ph_[j_ph];
+// for (int j_ph=0; j_ph<nLons; j_ph++){  
+//   ph_j = ph_[j_ph];
 
-  magLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
-  this->geoLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
-  this->magLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
+//   magLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
+//   this->geoLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
+//   this->magLon_scgc.subcube(j_ph, 0, 0, j_ph, nLats-1, nAlts-1).fill(ph_j);
 
-  for (int l=0; l<Nlats; l++){
-    if(l>0){
+//   for (int l=0; l<Nlats; l++){
+//     if(l>0){
 
-    } else {
-      xS[l]=sin(th_[l])*cos(ph_j);
-      zS[l]=cos(th_[l]);
-    }
+//     } else {
+//       xS[l]=sin(th_[l])*cos(ph_j);
+//       zS[l]=cos(th_[l]);
+//     }
 
-  }
+//   }
 
-}    
+// }    
 
-
-
-#else
-          throw std::runtime_error("unknown QGRDTYPE in  Grid::init_mgrid");
-#endif        
-
-// exit(10);
-
-// turn the switch on! 
-  this->set_IsMagGrid(1);
+// #else
+//           throw std::runtime_error("unknown QGRDTYPE in  Grid::init_mgrid");
   
   
-{
-
-  
-cout<<magPhi_scgc.n_rows<<"\n"<<magPhi_scgc.n_cols<<"\n"<<magPhi_scgc.n_slices<<"\n";
-}
+// {
+// cout<<magPhi_scgc.n_rows<<"\n"<<magPhi_scgc.n_cols<<"\n"<<magPhi_scgc.n_slices<<"\n";
+// }
     
-  double res = -1.0;
-  
-}
 
 
 

@@ -179,6 +179,9 @@ void Neutrals::calc_scale_height(Grid grid) {
 
   // Calculate scale-heights of each species, completely independently:
   for (iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
+    auto res = species[iSpecies].mass;
+    auto res2 = grid.gravity_vcgc[2];
+
     species[iSpecies].scale_height_scgc =
       cKB * temperature_scgc /
       (species[iSpecies].mass * abs(grid.gravity_vcgc[2]));

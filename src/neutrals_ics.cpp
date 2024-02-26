@@ -169,6 +169,7 @@ bool Neutrals::initial_conditions(Grid grid,
       }
 
       calc_scale_height(grid);
+      
       fill_with_hydrostatic(1, nAlts, grid);
     } // type = planet
   }
