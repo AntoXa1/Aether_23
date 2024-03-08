@@ -178,7 +178,7 @@ int Neutrals::read_planet_file(Planets planet) {
   nSpecies = neutrals["name"].size();
   nSpeciesAdvect = 0;
 
-  for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++) {
+  for (int iSpecies = 0; iSpecies < nSpecies; iSpecies++){
     species[iSpecies].cName = neutrals["name"][iSpecies];
     double mass = neutrals["mass"][iSpecies];
     species[iSpecies].mass = mass * cAMU;

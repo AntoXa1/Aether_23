@@ -12,21 +12,21 @@
 #define WLEVEL 0
 #define QGRDTYPE 2
  
- void NeutralSpeciesFillMagLine(){
+//  void NeutralSpeciesFillMagLine(){
 
-    int64_t nAlts = grid.get_nAlts();
+//     int64_t nAlts = grid.get_nAlts();
 
-  for (int iAlt = 1; iAlt < nAlts; iAlt++) {
-    species[iSpecies].density_scgc.slice(iAlt) =
-      temperature_scgc.slice(iAlt - 1) /
-      temperature_scgc.slice(iAlt) %
-      species[iSpecies].density_scgc.slice(iAlt - 1) %
-      exp(-grid.dalt_lower_scgc.slice(iAlt) /
-          species[iSpecies].scale_height_scgc.slice(iAlt));
-  }
+//   for (int iAlt = 1; iAlt < nAlts; iAlt++) {
+//     species[iSpecies].density_scgc.slice(iAlt) =
+//       temperature_scgc.slice(iAlt - 1) /
+//       temperature_scgc.slice(iAlt) %
+//       species[iSpecies].density_scgc.slice(iAlt - 1) %
+//       exp(-grid.dalt_lower_scgc.slice(iAlt) /
+//           species[iSpecies].scale_height_scgc.slice(iAlt));
+//   }
 
 
- }
+//  }
 
 void NeutralSpeciesFillFullMagGrid(){
 
@@ -209,14 +209,14 @@ void ScatPlotArmaArray(std::vector<double> q1d, std::vector<double> p1d, arma_cu
   system(pyFileToExecute.c_str());
 }
 
-void FillAllCoordsOnMagGrid(Grid *grid, std::vector<double> q1d, 
+void FillAllCoordsOnMagGrid(Grid *grid, Planets planet, std::vector<double> q1d, 
                                          std::vector<double> p1d, 
                                          std::vector<double> phiLon, int idOfLon){
   int Nlats=grid->get_nLats();
-  int Nalts=grid->get_nAlts();
-  
+  int Nalts=grid->get_nAlts();  
   int nQmag=p1d[q1d.size()];
-
+  precision_t radius0 = planet.get_radius(0.0);
+  
   int nPmag=p1d.size();  
   double pj,qi,ri = 0.9;
   double x, y, z, th;  
@@ -226,13 +226,18 @@ void FillAllCoordsOnMagGrid(Grid *grid, std::vector<double> q1d,
 
   for (int j_p=0; j_p<Nlats; j_p++){
     pj = p1d[j_p];
+    double psSmall = 1.e-3;  
+    double thetaOfPs = asin( sqrt( 1./ std::max(pj,psSmall) ) );
+
+
     for(int i_q=0; i_q<Nalts; i_q++){
       
       isOnGrid = grid->magMask(idOfLon, j_p, i_q);
+//    isOnGrid = 1;
 
       qi = q1d[i_q];
       if(isOnGrid==1) {
-        SolveDipoleEq(ri, pj, qi); // SHOW(ri)
+        SolveDipoleEq(ri, pj, qi); 
         } else {
           ri=0.0;  
         }
@@ -245,6 +250,13 @@ void FillAllCoordsOnMagGrid(Grid *grid, std::vector<double> q1d,
       grid->magZ_scgc(idOfLon, j_p, i_q) = z;
       grid->magQ_scgc(idOfLon, j_p, i_q) = q1d[i_q]; 
       grid->magQ_scgc(idOfLon, j_p, i_q) = p1d[j_p]; 
+
+      grid->geoLon_scgc(idOfLon,j_p,i_q) = ph_j;
+      grid->geoLat_scgc(idOfLon,j_p,i_q) = thetaOfPs;
+      grid->geoAlt_scgc(idOfLon,j_p,i_q) = ri*radius0;
+
+      SHOW(grid->geoAlt_scgc(idOfLon,j_p,i_q))
+      SHOW(idOfLon); SHOW(j_p); SHOW(i_q);
 
     }
   }
@@ -467,7 +479,10 @@ SHOW(q_i)
       
       }
 
-      FillAllCoordsOnMagGrid(this,q1d,p1d,ph_,j_lon);
+      FillAllCoordsOnMagGrid(this,planet,q1d,p1d,ph_,j_lon);
+
+
+// PLOT(this->geoAlt_scgc.tube(j_lon,5))
 
 
       // ScatPlotArmaArray(q1d,p1d,magMask,j_lon);
@@ -479,7 +494,6 @@ SHOW(q_i)
 // turn the switch on! 
   this->set_IsMagGrid(1);
   
-
 return(true);
 
 } 
@@ -787,7 +801,6 @@ bool Grid::init_mGrid(Planets planet, Inputs input, Report &report) {
         // exit(10);
 
         //<
-
 
         // if (iX == 5 & iY == 5)
         //   cout << "lon, lat, alt: " << magPhi_scgc(iX,iY,iZ) << " "

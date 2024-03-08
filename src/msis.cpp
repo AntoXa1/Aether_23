@@ -209,6 +209,10 @@ bool Msis::set_locations(arma_cube longitude,
   lonDeg = longitude * cRtoD;
   latDeg = latitude * cRtoD;
   altKm = altitude / 1000.0;
+
+// SHOW(altitude.tube(1,1)/1000)
+// exit(10);
+
   didChange = true;
 
   return didWork;

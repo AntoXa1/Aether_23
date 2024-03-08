@@ -47,6 +47,7 @@ bool Neutrals::initial_conditions(Grid grid,
     json ics = input.get_initial_condition_types();
     std::string icsType = mklower(ics["type"]);
 
+
     if (icsType == "msis") {
 
       report.print(2, "Using MSIS for Initial Conditions");
@@ -67,6 +68,9 @@ bool Neutrals::initial_conditions(Grid grid,
         msis.set_locations(grid.geoLon_scgc,
                            grid.geoLat_scgc,
                            grid.geoAlt_scgc);
+
+// SHOW(grid.geoAlt_scgc.tube(1,1)); exit(10);
+
 
         // This is just to check if MSIS is actually working:
         if (msis.is_valid_species("Tn"))

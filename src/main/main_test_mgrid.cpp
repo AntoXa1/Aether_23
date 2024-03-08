@@ -129,12 +129,15 @@ int main() {
   // MPI_Barrier(aether_comm);
   if (!didWork) throw std::string("init_geo_grid failed!");  
 
+// SHOW(gGrid.geoAlt_scgc.tube(0,5)); sleep(5);
+
   // gGrid.fill_grid(planet);
 
   gGrid.report_grid_boundaries();
 
-  SHOW(gGrid.geoX_scgc(1,1,1)) 
-  SHOW(gGrid.geoAlt_scgc(1,1,1))
+// SHOW(gGrid.geoAlt_scgc.tube(0,5)); exit(10);
+// SHOW(gGrid.geoX_scgc(1,1,1)) 
+// SHOW(gGrid.geoAlt_scgc(1,1,1))
 
   // Initialize Neutrals on geographic grid:
   Neutrals neutrals(gGrid, planet, time, indices);
@@ -153,7 +156,10 @@ int main() {
   // MPI_Barrier(aether_comm);
   
   if (!didWork)throw std::string("init_mag_grid failed!");
+  mGrid.report_grid_boundaries(); 
   
+  // SHOW(mGrid.geoAlt_scgc.tube(0,20)); exit(10);
+
   cout << "initMagneticGrid done"<< endl;
 
 
@@ -178,6 +184,7 @@ int main() {
     Neutrals mNeutrals(mGrid, planet, time, indices);  
     cout<<" Initialize Neutrals on dipole grid: done .."<<endl;
 
+// SHOW(mNeutrals.density_scgc.tube(0,20)); exit(10);
 
   // Initialize Ions on m-geographic grid:
     Ions mIons(mGrid, planet);
@@ -193,25 +200,11 @@ int main() {
   euv.pair_euv(mNeutrals, mIons);
 
   // Initialize Chemical scheme (including reading file):
-  Chemistry m_chemistry(mNeutrals, mIons);
+  Chemistry mChemistry(mNeutrals, mIons);
 
     
-      
-  // for (int i=1; i < gGrid.get_nAlts(); i++)
   // SHOW( gGrid.radius_scgc(iLon,iLat, i) );          
-  // SHOW(input.get_nAltsMag())    
-  // int  Nq =10;
-  // int tPower =1;
-  // DipoleLine mLine(Nq,tPower);
-
-    // SHOW(input.get_nLonsMag()); exit(10);
-    //   int iAlt=0; int iLon=0, iLat =0;
-    //   for (int i=1; i<mGrid.get_nAlts(); i++){
-    //     SHOW(mGrid.radius_scgc(iLon,iLat, i) ); 
-    //     SHOW(mGrid.geoAlt_scgc(iLon,iLat, i) );    
-    //     SHOW(i);
-    // WriteScatteredGridToFile(mGrid);
-
+  
 
   // Read in the collision frequencies and other diffusion coefficients:
   read_collision_file(mNeutrals, mIons);
@@ -223,6 +216,11 @@ int main() {
   cout<<"init_ion_temperature done"<<"\n";
   // system("pause");
 
+  // Initialize electrodynamics and check if electrodynamics times
+  // works with input time
+  Electrodynamics electrodynamics(time);
+  if (!electrodynamics.is_ok())
+    throw std::string("electrodynamics initialization failed!");
 
   double dt_couple = time.get_end() - time.get_current();
   time.increment_intermediate(dt_couple);
@@ -245,24 +243,25 @@ int main() {
                     mIons,
                     indices);
     
-
-  
-
   //cout<< " No calc_chemistry "<<endl;
   // m_chemistry.calc_chemistry(mNeutrals, mIons, time, mGrid); 
 
   // advance chem
+  
+  Logfile logfile(indices);
+
   while (time.get_current() < time.get_end()) {
-    // didWork = advance(planet,
-    // 		  gGrid,
-    // 		  time,
-    // 		  euv,
-    // 		  neutrals,
-    // 		  ions,
-    // 		  mchemistry,
-    // 		  electrodynamics,
-    // 		  indices,
-    // 		  logfile);
+
+    didWork = advance(planet,
+    		  gGrid,
+    		  time,
+    		  euv,
+    		  neutrals,
+    		  ions,
+    		  mChemistry,
+    		  electrodynamics,
+    		  indices,
+    		  logfile);
 
     if (!didWork) throw std::string("Error in advance!");  
         
