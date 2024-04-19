@@ -471,6 +471,7 @@ SHOW(q_i)
         GetPsFromQs(pOfQs,qs,thetaOfPs);                
         p1d[lOfPs] = pOfQs;
         //p-grid is not independent: defined by the qs spacing:
+        
         this->magP_scgc.tube(j_lon, lOfPs).fill(pOfQs); 
         // SHOW(p1d[lOfPs]);SHOW(q1d[i_q]);SHOW(thetaOfPs);SHOW(" ")
         
