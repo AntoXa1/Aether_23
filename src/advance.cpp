@@ -53,7 +53,7 @@ bool advance(Planets &planet,
   time.calc_dt(dtNeutral, dtIon);
 
   // ------------------------------------
-  // Do advection first :
+  // Do advection first:
 
   // Upper BCs requires the scale height to be calculated, so do that
   // first

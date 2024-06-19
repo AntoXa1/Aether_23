@@ -6,7 +6,7 @@
 #include "aether.h"
 
 // -----------------------------------------------------------------------------
-// This is where we will call the different advection schemes
+// This is where we will ca ll the different advection schemes
 // -----------------------------------------------------------------------------
   
 bool Neutrals::advect_vertical(Grid grid, Times time) {
